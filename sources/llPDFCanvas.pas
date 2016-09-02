@@ -21,7 +21,7 @@ uses
 {$else}
   WinAPI.Windows, System.SysUtils, System.Classes, Vcl.Graphics, System.Math,
 {$endif}
-{$ifdef WIN64}
+{$ifdef W3264}
   System.ZLib, System.ZLibConst,
 {$else}
   llPDFFlate,        
