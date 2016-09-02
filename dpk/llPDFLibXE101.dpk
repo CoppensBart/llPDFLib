@@ -36,7 +36,7 @@ requires
 
 contains
   llPDFReg,
-  llPDFRSA in 'llPDFRSA.pas',
+  llPDFRSA,
   llPDFResources,
   llPDFOutline,
   llPDFEMF,
