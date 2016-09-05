@@ -15,7 +15,7 @@ unit llPDFFlate;
 
 interface
 
-{$IFDEF win32}
+{$IFNDEF W3264}
 
 uses
 {$ifndef USENAMESPACE}
@@ -82,7 +82,8 @@ type
 {$ENDIF}
 
 implementation
-{$IFDEF win32}
+
+{$IFNDEF W3264}
 uses llPDFResources;
 
 
@@ -134,7 +135,6 @@ const
     ''
   );
 
-{$IFNDEF W3264}
 {$L obj\deflate.obj}
 {$L obj\inflate.obj}
 {$L obj\inftrees.obj}
@@ -144,7 +144,7 @@ const
 {$L obj\infcodes.obj}
 {$L obj\infutil.obj}
 {$L obj\inffast.obj}
-{$ENDIF}
+
 procedure _tr_init; external;
 procedure _tr_tally; external;
 procedure _tr_flush_block; external;
@@ -159,7 +159,6 @@ procedure inflate_set_dictionary; external;
 procedure inflate_trees_bits; external;
 procedure inflate_trees_dynamic; external;
 procedure inflate_trees_fixed; external;
-//procedure inflate_trees_free; external;
 procedure inflate_codes_new; external;
 procedure inflate_codes; external;
 procedure inflate_codes_free; external;
@@ -193,6 +192,7 @@ const
 // deflate compresses data
 function deflateInit_ ( var strm: TZStreamRec; level: Integer; version: PANSIChar;
   recsize: Integer ): Integer; external;
+
 function deflate ( var strm: TZStreamRec; flush: Integer ): Integer; external;
 function deflateEnd ( var strm: TZStreamRec ): Integer; external;
 
@@ -352,7 +352,6 @@ begin
   else
     Result := ( 1.0 - ( FZRec.total_out / FZRec.total_in ) ) * 100.0;
 end;
-
 {$ENDIF}
 
 end.
