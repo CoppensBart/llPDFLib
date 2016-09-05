@@ -311,37 +311,6 @@ type
   TPointArray = array [ 0..MaxInt div SizeOf ( TPoint ) - 1 ] of TPoint;
   PPointArray = ^TPointArray;
 
-function GetGDIHatchPatternAsImage(Hatch: Integer): TBitmap;
-const
-  GdiPatterns: array[0..6, 0..7] of Byte = (
-  (*Horizontal: array[0..7] of Byte =*) ( $FF, $00, $00, $00, $00, $00, $00, $00 ),
-  (*Vertical:   array[0..7] of Byte =*) ( $80, $80, $80, $80, $80, $80, $80, $80 ),
-  (*FDiagonal:  array[0..7] of Byte =*) ( $80, $40, $20, $10, $08, $04, $02, $01 ),
-  (*BDiagonal:  array[0..7] of Byte =*) ( $01, $02, $04, $08, $10, $20, $40, $80 ),
-  (*Cross:      array[0..7] of Byte =*) ( $FF, $80, $80, $80, $80, $80, $80, $80 ),
-  (*DiagCross:  array[0..7] of Byte =*) ( $82, $44, $28, $10, $28, $44, $82, $01 ),
-  (*Blank:      array[0..7] of Byte =*) ( $00, $00, $00, $00, $00, $00, $00, $00 ));
-var
-  P: PByte;
-  PNot: Byte;
-  I: Integer;
-begin
-  Result := TBitmap.Create;
-  Result.PixelFormat := pf1Bit;
-  Result.Width := 8;
-  Result.Height := 8;
-
-  if ((Hatch < 0) or (Hatch > 5)) then
-    Hatch := 6;
-
-  for I := 0 to 7 do
-  begin
-    P := Result.ScanLine[I];
-    PNot := not GdiPatterns[Hatch, I];
-    Move(PNot, P^, 1);
-  end;
-end;
-
 { TEMWParser }
 
 function IP ( Old: Pointer; sz: Integer ): Pointer;
@@ -432,8 +401,6 @@ begin
     Pattern.Height := PatSize;
     Pattern.XStep := PatSize;
     Pattern.YStep := PatSize;
-
-    // GetGDIHatchPatternAsImage
 
     with Pattern do
     begin
