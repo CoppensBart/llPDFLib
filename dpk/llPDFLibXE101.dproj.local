@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+  <ProjectSortOrder AutoSort="0" SortType="0">
+    <File Path="..\..\llbdflib"/>
+    <File Path="..\sources"/>
+    <File Path="..\sources\llPDFCanvas.pas"/>
+    <File Path="..\sources\llPDFDocument.pas"/>
+    <File Path="..\sources\llPDFEMF.pas"/>
+    <File Path="..\sources\llPDFEngine.pas"/>
+    <File Path="..\sources\llPDFFont.pas"/>
+    <File Path="..\sources\llPDFImage.pas"/>
+    <File Path="..\sources\llPDFMisc.pas"/>
+    <File Path="..\sources\llPDFNames.pas"/>
+    <File Path="llPDFReg.dcr"/>
+    <File Path="llPDFRSA.pas"/>
+    <File Path="rtl.dcp"/>
+    <File Path="vcl.dcp"/>
+    <File Path="vclimg.dcp"/>
+  </ProjectSortOrder>
+</BorlandProject>

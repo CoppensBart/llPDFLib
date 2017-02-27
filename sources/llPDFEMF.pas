@@ -2516,11 +2516,13 @@ begin
                 GY ( Data^.yDest, False ),
                 GX ( Data^.cxDest, False ),
                 GY ( Data^.cyDest, False ), 0 );
+
             end;
           finally
             B1.Free;
           end;
-      end else
+      end
+      else
       begin
         if (Data^.rclBounds.Right - Data^.rclBounds.Left > 0) and
            (Data^.rclBounds.Bottom - Data^.rclBounds.Top > 0) then
@@ -2533,6 +2535,7 @@ begin
             GY ( Data^.yDest, False ),
             GX ( Data^.cxDest, False ),
             GY ( Data^.cyDest, False ), 0 );
+
         end;
       end;
     finally
