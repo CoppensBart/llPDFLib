@@ -2514,11 +2514,18 @@ begin
           end;
       end else
       begin
-        I := AddBitmap( B );
-        FCanvas.ShowImage ( I, GX ( Data^.rclBounds.Left, False ),
-          GY ( Data^.rclBounds.Top, False ),
-          GX ( Data^.rclBounds.Right - Data^.rclBounds.Left + 1, False ),
-          GY ( Data^.rclBounds.Bottom - Data^.rclBounds.Top + 1, False ), 0 );
+        if (Data^.rclBounds.Right - Data^.rclBounds.Left > 0) and
+           (Data^.rclBounds.Bottom - Data^.rclBounds.Top > 0) then
+        begin
+          I := AddBitmap( B );
+
+          FCanvas.ShowImage (
+            I,
+            GX ( Data^.xDest, False ),
+            GY ( Data^.yDest, False ),
+            GX ( Data^.cxDest, False ),
+            GY ( Data^.cyDest, False ), 0 );
+        end;
       end;
     finally
       B.Free;
