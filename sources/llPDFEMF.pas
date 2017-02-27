@@ -296,7 +296,7 @@ type
     destructor Destroy; override;
   end;
 
-{$IFDEF CANVASDBG}
+{$IFDEF DEBUG_EMF_COMMANDS}
 var
   iii: Integer = 0;
   debugLogsDirectory: string = '';
@@ -3801,7 +3801,7 @@ end;
 {$endif}
 
 initialization
-{$IFDEF CANVASDBG}
+{$IFDEF DEBUG_EMF_COMMANDS}
   debugLogsDirectory := ExtractFilePath(ParamStr(0)) + 'HDCDebug' + PathDelim;
 {$ENDIF}
 

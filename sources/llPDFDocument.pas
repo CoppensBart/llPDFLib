@@ -917,7 +917,7 @@ begin
   Dbg:= TMemoryStream.Create();
   try
     Dbg.CopyFrom(FEngine.Stream,0);
-    Dbg.SaveToFile( debugLogsDirectory + IntToStr ( iii ) + '.doc.txt' );
+    Dbg.SaveToFile( debugLogsDirectory + IntToStr ( iii ) + '.pdf.txt' );
   finally
     FreeAndNil(Dbg);
   end;
