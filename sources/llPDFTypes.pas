@@ -800,6 +800,7 @@ type
     FUseScreen: Boolean;
     FUseFrame: Boolean;
     FShowNullPen: Boolean;
+    FDisableGDIHatchStyleEmulation: Boolean;
     procedure SetUsedDC(const Value: HDC);
 {#int}
   public
@@ -845,6 +846,10 @@ type
     ///   Sometimes it is necessary to draw NullPen. We don’t understand when such cases occur and want to ask you:)
     /// </summary>
     property ShowNullPen: Boolean read FShowNullPen write FShowNullPen;
+    /// <summary>
+    ///   Sometimes it is necessary to disable emulate standart gdi brush styles. We don’t understand when such cases occur and want to ask you:)
+    /// </summary>
+    property DisableGDIHatchStyleEmulation: Boolean read FDisableGDIHatchStyleEmulation write FDisableGDIHatchStyleEmulation;
   end;
 
 {#int}
@@ -882,6 +887,7 @@ begin
   FRedraw := True;
   FLineCap := lcProjectingSquare;
   FLineJoin := ljBevel;
+  FDisableGDIHatchStyleEmulation := False;
 end;
 
 destructor TPDFEMFParseOptions.Destroy;

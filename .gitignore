@@ -3,3 +3,12 @@
 *.dof
 *.dsk
 *.dcu
+~*~
+__history/*
+*.Old
+*.local
+*.exe
+*.identcache
+*.stat
+*CVS*
+.cvsignore

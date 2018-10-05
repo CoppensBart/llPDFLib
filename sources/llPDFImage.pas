@@ -367,7 +367,6 @@ var
   B: TBitmap;
   PDFImage: TPDFImage;
 begin
-  Result := -1;
   if not ( Image is TBitmap ) then
     raise EPDFException.Create ( SCreateMaskAvailableOnlyForBitmapImages );
   B := TBitmap.Create;

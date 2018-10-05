@@ -19,6 +19,7 @@ uses
   WinAPI.Windows, System.SysUtils, System.Classes, Vcl.Graphics,
   WinAPI.ShellAPI, Vcl.Printers,
 {$endif}
+
 {$ifdef W3264}
   System.ZLib, System.ZLibConst,
 {$else}
@@ -294,7 +295,6 @@ type
     ///   Defines a list of TTF fonts that will not be introduced into the document.
     /// </summary>
     property NonEmbeddedFonts: TStringList read GetNonEmbeddedFonts write SetNonEmbeddedFonts;
-
     /// <summary>
     ///   If this property is set, then the output of the generated document is active in
      /// stream and not in a file.
@@ -464,9 +464,9 @@ begin
   FPages.Actions := FActions;
 
   FDocumentInfo := TPDFDocInfo.Create;
-  FDocumentInfo.Creator := 'llPDFLib Application';
+  FDocumentInfo.Creator := 'llPDFLib library 6.x';
   FDocumentInfo.Keywords := 'llPDFLib';
-  FDocumentInfo.FProducer := 'llPDFLib 6.x (http://www.sybrex.com)';
+  FDocumentInfo.FProducer := 'llPDFLib 6.x';
 
   FDocumentInfo.Author := 'Windows User';
   FDocumentInfo.Title := 'No Title';
@@ -494,8 +494,7 @@ begin
   ReferrenceDC := CreateDC(
    'WINSPOOL',PChar(Printer.Printers[Printer.PrinterIndex]),nil,nil);
 
-  EMFOptions.UsedDC := ReferrenceDC;
-
+//  EMFOptions.UsedDC := ReferrenceDC;
   DeleteDC(ReferrenceDC);
 
   Printer.PrinterIndex := SavedPrinterIndex;
@@ -689,7 +688,7 @@ end;
 
 function TPDFDocument.GetUsedDC: HDC;
 begin
-  Result := EMFOptions.UsedDC; 
+  Result := EMFOptions.UsedDC;
 end;
 
 procedure TPDFDocument.NewPage;
@@ -824,7 +823,7 @@ var
   CatalogID, InfoID, EncryptID, MetaID: Integer;
 {$IFDEF PDF_CANVAS_DEBUG}
   Dbg: TMemoryStream;
-{$ENDIF}  
+{$ENDIF}
 begin
   InfoID := FEngine.GetNextID;
   FDocumentInfo.Save(InfoID, FEngine);
@@ -933,7 +932,7 @@ end;
 
 procedure TPDFDocument.SetNonEmbeddedFonts(const Value: TStringList);
 begin
-  FFonts.NonEmbeddedFonts :=Value;
+  FFonts.NonEmbeddedFonts := Value;
 end;
 
 procedure TPDFDocument.SetResolution(const Value: Integer);

@@ -22,7 +22,7 @@ uses
   WinAPI.Windows, System.SysUtils, System.Classes, Vcl.Graphics, System.Math,
 {$endif}
 {$ifdef W3264}
-  System.ZLib, System.ZLibConst,
+  System.ZLib, ZLibConst,
 {$else}
   llPDFFlate,        
 {$endif}
@@ -3357,13 +3357,12 @@ var
   AlignOffset:Extended;
   St: TStringType;
 begin
-  if TextStr = '' then
-  begin
-    Result := 0;
-    Exit;
-  end;
-  Len := Length ( TextStr );
   Result := 0;
+  if TextStr = '' then
+    Exit;
+
+  Len := Length ( TextStr );
+
   St := GetStringType(TextStr);
   if (st = stASCII) or ((st = stANSI) and(FCurrentFont is TPDFStandardFont)) then
   begin
@@ -4049,13 +4048,15 @@ end;
 
 procedure TPDFPage.SetSize(const Value: TPDFPageSize);
 const
-  val:array[0..37] of Integer = (792,612,842,595,1190,842,1008,612,728,516,649,459,792,595,1031,728,595,419,936,612,756,522,
+  Sz: array[0..37] of Integer =
+(792,612,842,595,1190,842,1008,612,728,516,649,459,792,595,1031,728,595,419,936,612,756,522,
 1031,728,708,499,459,323,623,312,540,279,639,279,684,297,747,324);
 begin
   if Factions then
     raise EPDFException.Create ( SPageInProgress );
-  FHeight := Val[Ord(Value) shl 1];
-  FWidth := Val[Ord(Value) shl 1 + 1];
+
+  FHeight := Sz[Ord(Value) shl 1];
+  FWidth := Sz[Ord(Value) shl 1 + 1];
 end;
 
 procedure TPDFPage.SetThumbnail(const Value: Integer);

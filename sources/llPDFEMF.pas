@@ -1,12 +1,12 @@
 {**************************************************
-                                                  
-                   llPDFLib                       
-      Version  6.4.0.1389,   09.07.2016            
-     Copyright (c) 2002-2016  Sybrex Systems      
+
+                   llPDFLib
+      Version  6.4.0.1389,   09.07.2016
+     Copyright (c) 2002-2016  Sybrex Systems
      Copyright (c) 2002-2016  Vadim M. Shakun
-               All rights reserved                
-           mailto:em-info@sybrex.com              
-                                                  
+               All rights reserved
+           mailto:em-info@sybrex.com
+
 **************************************************}
 
 unit llPDFEMF;
@@ -15,10 +15,10 @@ interface
 {$ifndef BASE}
 uses
 {$ifndef USENAMESPACE}
-  Windows, SysUtils, Classes, Graphics, Math, 
+  Windows, SysUtils, Classes, Graphics, Math,
 {$else}
   WinAPI.Windows, System.SysUtils, System.Classes, Vcl.Graphics, System.Math, System.Types,
-{$endif} 
+{$endif}
 {$ifdef USEANSISTRINGS}
   System.AnsiStrings,
 {$endif}
@@ -111,6 +111,7 @@ type
     FHatchedPatterns: array of TEMFHatchedPattern;
     MapMode: Integer;
     FCanvas: TPDFCanvas;
+    // Etalon dc scale factor
     CalX, CalY: Extended;
     FontScale: Extended;
     Meta: TMetafile;
@@ -151,7 +152,7 @@ type
     VXNum,VYNum,VXDenom,VYDenom,WXNum,WYNum,WXDenom,WYDenom: Integer;
     HandlesCount: DWORD;
     WNG: Boolean;
-    HandleTable: array of HGDIOBJ;
+    HandlesTable: array of HGDIOBJ;
     ViewPortScaleUsed:Boolean;
     WindowScaleUsed:Boolean;
     FIsPattern: Boolean;
@@ -174,9 +175,19 @@ type
     function MapY ( Value: Extended ): Extended;
     function FX: Extended;
     function FY: Extended;
+
     function GX ( Value: Extended; Map: Boolean = True ): Extended;
     function GY ( Value: Extended; Map: Boolean = True ): Extended;
-
+{
+    // Coordinate conversions (world transformation)
+    function Sx(X, Y: Extended): Extended;
+    function Sy(X, Y: Extended): Extended;
+    function Sw(X: Extended): Extended;
+    function Sh(Y: Extended): Extended;
+    // Coordinate conversion (without world transformation)
+    function Sxb(X, Y: Extended): Extended;
+    function Syb(X, Y: Extended): Extended;
+}
     procedure SetCurFont;
 
     // Work with map mode , windows and view ports
@@ -246,6 +257,7 @@ type
     procedure DoStretchBlt ( Data: PEMRStretchBlt );
     procedure DoAlphaBlend ( Data: PEMRAlphaBlend );
     procedure DoMaskBlt ( Data: PEMRMaskBlt );
+    procedure DoPlgBlt ( Data: PEMRPLGBlt ); //
     procedure DoTransparentBLT ( Data: PEMRTransparentBLT );
 
     // Create Indirect objects
@@ -271,6 +283,7 @@ type
     procedure DoSetROP2 (Data: PEMRSetROP2);
 
     procedure DoSetTextJustification ( Data: PEMRLineTo ); //
+    procedure DoGdiComment ( Data: PEMRGDIComment );
 
     procedure DoExcludeClipRect ( Data: PEMRExcludeClipRect );
     procedure DoExtSelectClipRGN ( Data: PEMRExtSelectClipRgn );
@@ -367,11 +380,12 @@ end;
 
 procedure TEMWParser.CheckBrushToHatched;
 var
-  I, Len, PatSize,PatHalfSize: Integer;
+  I, Len: Integer;
   Pattern: TPDFPattern;
 begin
-  if CBrush.lbStyle <> BS_HATCHED then
+  if (CBrush.lbStyle <> BS_HATCHED) or FEMFOptions.DisableGDIHatchStyleEmulation then
     Exit;
+
   Pattern := nil;
   Len :=  Length( FHatchedPatterns);
   for I:= 0 to Len -1 do
@@ -384,6 +398,7 @@ begin
       Break;
     end;
   end;
+
   if Pattern = nil then
   begin
     SetLength(FHatchedPatterns, Len + 1);
@@ -393,21 +408,21 @@ begin
     FHatchedPatterns[Len].Color := CBrush.lbColor;
     Pattern := FHatchedPatterns[Len].idx;
     FPatterns.Add(Pattern);
-
-    PatSize := 4;
-    PatHalfSize := 2;
-
-    Pattern.Width := PatSize;
-    Pattern.Height := PatSize;
-    Pattern.XStep := PatSize;
-    Pattern.YStep := PatSize;
-
+    Pattern.Width := 4;
+    Pattern.Height := 4;
+    Pattern.XStep := 4;
+    Pattern.YStep := 4;
+    Pattern.SetLineJoin(ljRound);
     with Pattern do
     begin
-      NewPath;
-      Rectangle(0,0,PatSize,PatSize);
-      SetColorFill(ColorToPDFColor(BGColor));
-      Fill;
+      if BGMode then
+      begin
+        NewPath;
+        Rectangle(0,0,4,4);
+        SetColorFill(ColorToPDFColor(BGColor));
+        Fill;
+      end;
+
       NewPath;
       SetColorStroke(ColorToPDFColor(CBrush.lbColor));
       SetLineWidth(0.3);
@@ -415,47 +430,49 @@ begin
       case CBrush.lbHatch of
         HS_VERTICAL:
           begin
-            MoveTo(PatHalfSize,0);
-            LineTo(PatHalfSize,PatSize);
+            MoveTo(2,0);
+            LineTo(2,4);
           end;
         HS_HORIZONTAL:
           begin
-            MoveTo(0,PatHalfSize);
-            LineTo(PatSize,PatHalfSize);
+            MoveTo(0,2);
+            LineTo(4,2);
           end;
         HS_FDIAGONAL:
           begin
             MoveTo(0,0);
-            LineTo(PatSize,PatSize);
+            LineTo(4,4);
           end;
         HS_BDIAGONAL:
           begin
-            MoveTo(PatSize,0);
-            LineTo(0,PatSize);
+            MoveTo(4,0);
+            LineTo(0,4);
           end;
         HS_CROSS:
           begin
-            MoveTo(PatHalfSize,0);
-            LineTo(PatHalfSize,PatSize);
-            MoveTo(0,PatHalfSize);
-            LineTo(PatSize,PatHalfSize);
+            MoveTo(2,0);
+            LineTo(2,4);
+            MoveTo(0,2);
+            LineTo(4,2);
           end;
-        HS_DIAGCROSS:
+      else
           begin
             MoveTo(0,0);
-            LineTo(PatSize,PatSize);
-            MoveTo(PatSize,0);
-            LineTo(0,PatSize);
+            LineTo(4,4);
+            MoveTo(4,0);
+            LineTo(0,4);
           end;
       end;
 
       Stroke;
     end;
   end;
+
   if FCanvas is TPDFPage then
   begin
     TPDFPage(FCanvas).SetPattern(Pattern);
   end;
+
   if FCanvas is TPDFForm  then
   begin
     TPDFForm(FCanvas).SetPattern(Pattern);
@@ -662,27 +679,29 @@ begin
 end;
 
 procedure TEMWParser.DoCreateBrushInDirect ( Data: PEMRCreateBrushIndirect );
-{$ifdef Win64}
+{$ifdef W3264}
 var
-  LB: TagLogBrush;
+  LB: TLogBrush;
 {$endif}
 begin
   if Data^.ihBrush >= HandlesCount then
     Exit;
-  if HandleTable [ Data^.ihBrush ] <> $FFFFFFFF then
-    DeleteObject ( HandleTable [ Data^.ihBrush ] );
+  if HandlesTable [ Data^.ihBrush ] <> $FFFFFFFF then
+    DeleteObject ( HandlesTable [ Data^.ihBrush ] );
+
   if Data^.lb.lbStyle = BS_SOLID then
-    HandleTable [ Data^.ihBrush ] := CreateSolidBrush ( Data^.lb.lbColor )
+    HandlesTable [ Data^.ihBrush ] := CreateSolidBrush ( Data^.lb.lbColor )
   else
-{$ifdef win64}
+{$ifdef W3264}
     begin
       LB.lbStyle := Data^.lb.lbStyle;
       LB.lbColor := Data^.lb.lbColor;
       LB.lbHatch := Data^.lb.lbHatch;
-      HandleTable [ Data^.ihBrush ] := CreateBrushIndirect ( LB );
+
+      HandlesTable [ Data^.ihBrush ] := CreateBrushIndirect ( LB );
     end;
 {$else}
-    HandleTable [ Data^.ihBrush ] := CreateBrushIndirect ( TagLogBrush(Data^.lb) );
+    HandlesTable [ Data^.ihBrush ] := CreateBrushIndirect ( Data^.lb );
 {$endif}
 end;
 
@@ -699,8 +718,8 @@ var
 begin
   if Data^.ihBrush >= HandlesCount then
     Exit;
-  if HandleTable [ Data^.ihBrush ] <> $FFFFFFFF then
-    DeleteObject ( HandleTable [ Data^.ihBrush ] );
+  if HandlesTable [ Data^.ihBrush ] <> $FFFFFFFF then
+    DeleteObject ( HandlesTable [ Data^.ihBrush ] );
   P := IP ( Data, Data^.offBmi );
   O := IP ( Data, Data^.offBits );
   IsMonochrome := P^.bmiHeader.biBitCount = 1;
@@ -725,7 +744,7 @@ begin
   FPat[i].BM := BM;
 
 
-  HandleTable [ Data^.ihBrush ] := CreateDIBPatternBrushPt(BMI2, Data^.iUsage);
+  HandlesTable [ Data^.ihBrush ] := CreateDIBPatternBrushPt(BMI2, Data^.iUsage);
 end;
 
 procedure TEMWParser.DoCreateFontInDirectW ( Data: PEMRExtCreateFontIndirect );
@@ -734,16 +753,16 @@ var
 begin
   if Data^.ihFont >= HandlesCount then
     Exit;
-  if HandleTable [ Data^.ihFont ] <> $FFFFFFFF then
-    DeleteObject ( HandleTable [ Data^.ihFont ] );
+  if HandlesTable [ Data^.ihFont ] <> $FFFFFFFF then
+    DeleteObject ( HandlesTable [ Data^.ihFont ] );
 
-    HandleTable [ Data^.ihFont ] := CreateFontIndirectW ( Data^.elfw.elfLogFont );
-    if HandleTable [ Data^.ihFont ] = 0 then
+    HandlesTable [ Data^.ihFont ] := CreateFontIndirectW ( Data^.elfw.elfLogFont );
+    if HandlesTable [ Data^.ihFont ] = 0 then
     begin
       Move ( data^.elfw.elfLogFont, F, SizeOf ( F ) );
       WideCharToMultiByte ( CP_ACP, 0, Data^.elfw.elfLogFont.lfFaceName, LF_FACESIZE,
         F.lfFaceName, LF_FACESIZE, nil, nil );
-      HandleTable [ Data^.ihFont ] := CreateFontIndirectA ( F );
+      HandlesTable [ Data^.ihFont ] := CreateFontIndirectA ( F );
     end;
   {$IFDEF DEBUG_EMF_COMMANDS}
       DebugLog.Add ( 'Font: ' + AnsiString(Data^.elfw.elfLogFont.lfFaceName ));
@@ -754,17 +773,17 @@ procedure TEMWParser.DoCreatePen ( Data: PEMRCreatePen );
 begin
   if Data^.ihPen >= HandlesCount then
     Exit;
-  if HandleTable [ Data^.ihPen ] <> $FFFFFFFF then
-    DeleteObject ( HandleTable [ Data^.ihPen ] );
-  HandleTable [ Data^.ihPen ] := CreatePen ( Data^.lopn.lopnStyle, Data^.lopn.lopnWidth.x, Data^.lopn.lopnColor );
+  if HandlesTable [ Data^.ihPen ] <> $FFFFFFFF then
+    DeleteObject ( HandlesTable [ Data^.ihPen ] );
+  HandlesTable [ Data^.ihPen ] := CreatePen ( Data^.lopn.lopnStyle, Data^.lopn.lopnWidth.x, Data^.lopn.lopnColor );
 end;
 
 procedure TEMWParser.DoDeleteObject ( Data: PEMRDeleteObject );
 begin
   if Data^.ihObject >= HandlesCount then
     Exit;
-  DeleteObject ( HandleTable [ data^.ihObject ] );
-  HandleTable [ data^.ihObject ] := $FFFFFFFF;
+  DeleteObject ( HandlesTable [ data^.ihObject ] );
+  HandlesTable [ data^.ihObject ] := $FFFFFFFF;
 end;
 
 procedure TEMWParser.DoEllipse ( Data: PEMREllipse );
@@ -805,9 +824,9 @@ procedure TEMWParser.DoExtCreatePen ( Data: PEMRExtCreatePen );
 begin
   if Data^.ihPen >= HandlesCount then
     Exit;
-  if HandleTable [ Data^.ihPen ] <> $FFFFFFFF then
-    DeleteObject ( HandleTable [ Data^.ihPen ] );
-  HandleTable [ Data^.ihPen ] := CreatePen ( Data^.elp.elpPenStyle and PS_STYLE_MASK, Data^.elp.elpWidth, Data^.elp.elpColor );
+  if HandlesTable [ Data^.ihPen ] <> $FFFFFFFF then
+    DeleteObject ( HandlesTable [ Data^.ihPen ] );
+  HandlesTable [ Data^.ihPen ] := CreatePen ( Data^.elp.elpPenStyle and PS_STYLE_MASK, Data^.elp.elpWidth, Data^.elp.elpColor );
 end;
 
 procedure TEMWParser.DoSetROP2 ( Data: PEMRSetROP2);
@@ -1382,6 +1401,156 @@ begin
     PFillAndStroke;
 end;
 
+procedure TEMWParser.DoPlgBlt(Data: PEMRPLGBlt);
+var
+  B, Mask: TBitmap;
+  O: Pointer;
+  P, M: PBitmapInfo;
+  Width, Height :Integer;
+  IsMonochrome: Boolean;
+  //DstWidth, DstHeight : Integer;
+  A: array[0..3] of TPoint;
+  OfsX,OfsY{, ShearX, ShearY}: Extended;
+  L,T,H,W: Extended;
+  It: Boolean;
+begin
+  if InText then
+  begin
+    InText := False;
+    It := True;
+  end
+  else
+    It := False;
+  try
+    // Parallelogram points
+    A[0] := Data^.aptlDest[0]; // top left (A)
+    A[1] := Data^.aptlDest[1]; // top right (B)
+    A[2] := Data^.aptlDest[2]; // bottom left (C)
+    // Since the opposite sides are equal, AD = BC and AB = CD
+    // we can calculate the co-ordinates of the missing point D as
+    // D = B + C - A.
+    A[3].X := A[1].X + A[2].X - A[0].X;
+    A[3].Y := A[1].Y + A[2].Y - A[0].Y;
+    // now calc width and height destination rectangle
+    W := A[3].X - A[0].X;
+    H := A[3].Y - A[0].Y;
+    //
+    L := A[0].X;
+    T := A[0].Y;
+
+   {
+    DstWidth := Round(Sqrt(Sqr(DstArea[1].X - DstArea[0].X) + Sqr(DstArea[1].Y - DstArea[0].Y)));
+    DstHeight := Round(Sqrt(Sqr(DstArea[2].X - DstArea[0].X) + Sqr(DstArea[2].Y - DstArea[0].Y)));
+
+
+    ShearX := 0;
+    ShearY := 0;
+
+    if (DstArea[1].X - DstArea[0].X) <> 0 then
+      ShearX := (DstArea[1].Y - DstArea[0].Y) / (DstArea[1].X - DstArea[0].X);
+
+    if (DstArea[2].Y - DstArea[0].Y) <> 0 then
+      ShearY := (DstArea[2].X - DstArea[0].X) / (DstArea[2].Y - DstArea[0].Y);
+  }
+
+    if ( Data^.offBmiSrc > 0 ) and ( Data^.offBitsSrc > 0 ) then
+    begin
+      P := IP ( Data, Data^.offBmiSrc );
+      O := IP ( Data, Data^.offBitsSrc );
+
+      OfsX:= MapX(0) * CalX;
+      OfsY:= MapY(0) * CalY;
+
+  {
+      if Self.FEMFOptions.Redraw = False then // this
+      begin
+        OfsX:= MapX(0) * CalX;
+        OfsY:= MapY(0) * CalY;
+      end
+      else
+      begin
+        OfsX := XOff;
+        OfsY := YOff;
+      end;
+  }
+      IsMonochrome := P^.bmiHeader.biBitCount = 1;
+      Width := P^.bmiHeader.biWidth;
+      Height := P^.bmiHeader.biHeight;
+      Mask := nil;
+      B := TBitmap.Create;
+      try
+        B.Monochrome := IsMonochrome;
+        B.Width := Width;
+        B.Height := Height;
+        if StretchDIBits ( B.Canvas.Handle, 0, 0, Width, Height, 0, 0,
+          Width, Height, O, P^, Data^.iUsageSrc, SRCCOPY ) = Integer(GDI_ERROR) then
+        begin
+          Exit;
+        end;
+
+        if ( Data^.offBmiMask > 0 ) and
+           ( Data^.offBitsMask > 0 ) and
+           ( Data^.cbBitsMask > 0 ) then
+        begin
+          M := IP ( Data, Data^.offBmiMask );
+          O := IP ( Data, Data^.offBitsMask );
+          IsMonochrome := M^.bmiHeader.biBitCount = 1;
+          Width := M^.bmiHeader.biWidth;
+          Height := M^.bmiHeader.biHeight;
+          Mask := TBitmap.Create;
+          Mask.Monochrome := IsMonochrome;
+          Mask.Width := Width;
+          Mask.Height := Height;
+          if StretchDIBits ( Mask.Canvas.Handle, 0, 0, Width, Height, 0, 0,
+            Width, Height, O, M^, Data^.iUsageMask, SRCCOPY ) = Integer(GDI_ERROR) then
+            begin
+              Exit;
+            end;
+        end;
+
+        if ( Data^.rclBounds.Right - Data^.rclBounds.Left > 0 ) and
+           ( Data^.rclBounds.Bottom - Data^.rclBounds.Top > 0 ) then
+        begin
+{
+          L := Data^.rclBounds.Left;
+          T := Data^.rclBounds.Top;
+          W := Data^.rclBounds.Width;
+          H := Data^.rclBounds.Height;
+}
+          FCanvas.ShowImage (
+            AddBitmap( B ),
+            OfsX + GX ( L, True ),
+            OfsY + GY ( T, True ),
+            GX ( W, True ),
+            GY ( H, True ), 0 );
+        end
+
+      finally
+        FreeAndNil( B );
+        FreeAndNil( Mask );
+      end;
+    end
+    else
+    begin
+      if ( Data^.rclBounds.Left = 0 ) or ( Data^.rclBounds.Top = 0 ) then
+        FCanvas.NewPath
+      else
+      begin
+        FCanvas.Rectangle (
+          gX ( Data^.rclBounds.Left ),
+          gY ( Data^.rclBounds.Top ),
+          gX ( Data^.rclBounds.Left + Data^.rclBounds.Width ),
+          gY ( Data^.rclBounds.Top + Data^.rclBounds.Height));
+
+        CheckFill;
+      end;
+    end;
+  finally
+    if It then
+      InText := True;
+  end;
+end;
+
 procedure TEMWParser.DoPolyBezier ( PL: PEMRPolyline );
 var
   i: Integer;
@@ -1832,7 +2001,7 @@ var
   NFont: TLogFontA;
   I: DWORD;
   S: TSize;
-  P: TPoint;				
+  P: TPoint;
   ImgIdx: Integer;
   Pat: TPDFPattern;
 begin
@@ -2087,12 +2256,12 @@ begin
   begin
     if Data^.ihObject >= HandlesCount then
       Exit;
-    SelectObject ( DC, HandleTable [ Data^.ihObject ] );
-    I := GetObjectType ( HandleTable [ Data^.ihObject ] );
+    SelectObject ( DC, HandlesTable [ Data^.ihObject ] );
+    I := GetObjectType ( HandlesTable [ Data^.ihObject ] );
     case I of
       OBJ_PEN:
         begin
-          GetObject ( HandleTable [ Data^.ihObject ], SizeOf ( NPen ), @NPen );
+          GetObject ( HandlesTable [ Data^.ihObject ], SizeOf ( NPen ), @NPen );
           if NPen.lopnColor <> CPen.lopnColor then
           begin
             CPen.lopnColor := NPen.lopnColor;
@@ -2118,7 +2287,7 @@ begin
       OBJ_BRUSH:
         begin
           IsNullBrush := False;
-          GetObject ( HandleTable [ Data^.ihObject ], SizeOf ( NBrush ), @NBrush );
+          GetObject ( HandlesTable [ Data^.ihObject ], SizeOf ( NBrush ), @NBrush );
           if ( NBrush.lbStyle = BS_DIBPATTERN ) or ( NBrush.lbStyle = BS_DIBPATTERN8x8) then
           begin
             for I:= 0 to Length( FPat) -1 do
@@ -2153,17 +2322,21 @@ begin
                 end;
                 Break;
               end;
-          end else
+          end
+          else
           begin
             FIsPattern := False;
+
             if NBrush.lbColor <> CBrush.lbColor then
             begin
               CBrush.lbColor := NBrush.lbColor;
               if not InText then
                 SetBrushColor;
             end;
+
             if NBrush.lbStyle = 1 then
               IsNullBrush := True;
+
             if NBrush.lbStyle = BS_HATCHED then
             begin
               CBrush.lbStyle := BS_HATCHED;
@@ -2173,7 +2346,7 @@ begin
         end;
       OBJ_FONT:
         begin
-          GetObjectA ( HandleTable [ Data^.ihObject ], SizeOf ( NFont ), @NFont );
+          GetObjectA ( HandlesTable [ Data^.ihObject ], SizeOf ( NFont ), @NFont );
           for  I:= 1 to {$ifdef USEANSISTRINGS}system.ansistrings.StrLen{$else}StrLen{$endif}(PAnsiChar(@NFont.lfFaceName[0]))  do
             if NFont.lfFaceName[I] = '?' then
             begin
@@ -2278,7 +2451,7 @@ begin
           end;
           CPen.lopnStyle := PS_NULL;
         end;
-      OEM_FIXED_FONT, ANSI_FIXED_FONT, ANSI_VAR_FONT, SYSTEM_FONT:
+      OEM_FIXED_FONT, ANSI_FIXED_FONT, ANSI_VAR_FONT, SYSTEM_FONT, DEVICE_DEFAULT_FONT:
         begin
           CFont.lfFaceName := 'Arial';
           Fcha := True;
@@ -2473,14 +2646,31 @@ var
   BBB:HBITMAP;
   Width, Height :Integer;
   IsMonochrome: Boolean;
+  OfsX,OfsY: Extended;
 begin
   if ( Data^.offBmiSrc > 0 ) and ( Data^.offBitsSrc > 0 ) then
   begin
     P := IP ( Data, Data^.offBmiSrc );
     O := IP ( Data, Data^.offBitsSrc );
+
+    OfsX:= MapX(0) * CalX;
+    OfsY:= MapY(0) * CalY;
+{
+    if Self.FEMFOptions.Redraw = False then // this
+    begin
+      OfsX:= MapX(0) * CalX;
+      OfsY:= MapY(0) * CalY;
+    end
+    else
+    begin
+      OfsX := XOff;
+      OfsY := YOff;
+    end;
+}
     IsMonochrome := P^.bmiHeader.biBitCount = 1;
     Width := P^.bmiHeader.biWidth;
     Height := P^.bmiHeader.biHeight;
+
     B := TBitmap.Create;
     try
       B.Monochrome := IsMonochrome;
@@ -2512,17 +2702,15 @@ begin
 
               FCanvas.ShowImage (
                 I,
-                GX ( Data^.xDest, False ),
-                GY ( Data^.yDest, False ),
+                OfsX + GX ( Data^.xDest, False ),
+                OfsY + GY ( Data^.yDest, False ),
                 GX ( Data^.cxDest, False ),
                 GY ( Data^.cyDest, False ), 0 );
-
             end;
           finally
             B1.Free;
           end;
-      end
-      else
+      end else
       begin
         if (Data^.rclBounds.Right - Data^.rclBounds.Left > 0) and
            (Data^.rclBounds.Bottom - Data^.rclBounds.Top > 0) then
@@ -2531,13 +2719,13 @@ begin
 
           FCanvas.ShowImage (
             I,
-            GX ( Data^.xDest, False ),
-            GY ( Data^.yDest, False ),
+            OfsX + GX ( Data^.xDest, False ),
+            OfsY + GY ( Data^.yDest, False ),
             GX ( Data^.cxDest, False ),
             GY ( Data^.cyDest, False ), 0 );
-
         end;
       end;
+
     finally
       B.Free;
     end;
@@ -2647,9 +2835,9 @@ var
 begin
   GetEnhMetaFileHeader ( MFH, SizeOf ( Header ), @Header );
   HandlesCount := Header.nHandles;
-  SetLength ( HandleTable, HandlesCount );
+  SetLength ( HandlesTable, HandlesCount );
   for I := 0 to HandlesCount - 1 do
-    HandleTable [ i ] := $FFFFFFFF;
+    HandlesTable [ i ] := $FFFFFFFF;
   Meta.Clear;
   DC := MetaCanvas.Handle;
   SetGraphicsMode ( DC, GM_ADVANCED );
@@ -2714,8 +2902,8 @@ begin
       FreeMem( FPat[I].BMI);
     end;
   for I := 1 to HandlesCount - 1 do
-    DeleteObject ( HandleTable [ I ] );
-  HandleTable := nil;
+    DeleteObject ( HandlesTable [ I ] );
+  HandlesTable := nil;
   TransfStack := nil;
   FCanvas.TextFromBaseLine ( False );
   FCanvas.SetHorizontalScaling ( 100 );
@@ -2740,6 +2928,37 @@ begin
     Result := Value * CalY;
 end;
 
+{
+function TEMWParser.Sx(X, Y: Extended): Extended;
+begin
+  Result := X * XF.eM11 + Y * XF.eM21 + XF.eDx;
+end;
+
+function TEMWParser.Sy(X, Y: Extended): Extended;
+begin
+  Result := X * XF.eM12 + Y * XF.eM22 + XF.eDy;
+end;
+
+function TEMWParser.Sw(X: Extended): Extended;
+begin
+  Result := X * XF.eM11;
+end;
+
+function TEMWParser.Sh(Y: Extended): Extended;
+begin
+  Result := -Y * XF.eM22;
+end;
+
+function TEMWParser.Sxb(X, Y: Extended): Extended;
+begin
+  Result := X * XScale + Y * XF.eM21 + XOff;
+end;
+
+function TEMWParser.Syb(X, Y: Extended): Extended;
+begin
+  Result := X * XF.eM12 + Y * YScale + YOff;
+end;
+}
 function TEMWParser.GetMax: TSize;
 var
   Header: EnhMetaHeader;
@@ -2811,7 +3030,7 @@ begin
       RP := True;
       RS := GetFontByCharset ( CFont.lfCharSet );
     end;
-  end;		   
+  end;
   if CFont.lfHeight < 0 then
     FS := MulDiv ( abs ( CFont.lfHeight ), 72,
       GetDeviceCaps ( FEMFOptions.UsedDC, LOGPIXELSY ) ) * abs ( YScale )
@@ -3174,7 +3393,7 @@ begin
   end;
   NDW := ( Data^.nSize - 8 ) div 4;
   Pin := Pointer ( Data );
-  Inc ( Pin );	   
+  Inc ( Pin );
   for i := 0 to NDW - 1 do
   begin
     Inc ( Pin );
@@ -3267,6 +3486,7 @@ begin
     EMR_STROKEPATH: DoStrokePath;
     EMR_SELECTCLIPPATH: DoSelectClipPath;
     EMR_ABORTPATH: DoAbortPath;
+    EMR_GDICOMMENT: DoGdiComment(PEMRGDIComment ( Data) );
     EMR_SETDIBITSTODEVICE: DoSetDibitsToDevice ( PEMRSetDIBitsToDevice ( Data ) );
     EMR_STRETCHDIBITS: DoStretchDiBits ( PEMRStretchDiBits ( Data ) );
     EMR_EXTCREATEFONTINDIRECTW: DoCreateFontInDirectW ( PEMRExtCreateFontIndirect ( Data ) );
@@ -3287,6 +3507,7 @@ begin
     EMR_SMALLTEXTOUT: DoSmallTextOut ( PEMRSMALLTEXTOUTA ( Data ) );
     EMR_ALPHABLEND: DoAlphaBlend ( PEMRAlphaBlend ( Data ) );
     EMR_MASKBLT: DoMaskBlt ( PEMRMaskBlt ( Data ) );
+    EMR_PLGBLT: DoPlgBlt ( PEMRPLGBlt ( Data ) );
     EMR_TRANSPARENTBLT: DoTransparentBLT ( PEMRTransparentBlt ( Data ) );
     EMR_SETROP2: DoSetROP2 ( PEMRSetROP2(Data));
   end;
@@ -3343,7 +3564,7 @@ begin
   LastRecordInContents := FContent.Count;
   if not DirectoryExists( debugLogsDirectory ) then
     CreateDir ( debugLogsDirectory );
-    
+
 //  MS.SaveToFile('HDCDebug\' + IntToStr(iii) + '.emf');
 {$ENDIF}
   FEX := False;
@@ -3465,12 +3686,12 @@ begin
   begin
     if Data^.ihBrush >= HandlesCount then
       Exit;
-    SelectObject ( DC, HandleTable [ Data^.ihBrush ] );
-    I := GetObjectType ( HandleTable [ Data^.ihBrush ] );
+    SelectObject ( DC, HandlesTable [ Data^.ihBrush ] );
+    I := GetObjectType ( HandlesTable [ Data^.ihBrush ] );
     if I <> OBJ_BRUSH then
       Exit;
     IsNullBrush := False;
-    GetObject ( HandleTable [ Data^.ihBrush ], SizeOf ( NBrush ), @NBrush );
+    GetObject ( HandlesTable [ Data^.ihBrush ], SizeOf ( NBrush ), @NBrush );
     if NBrush.lbStyle = BS_HATCHED then
     begin
       NBrush.lbColor := BGColor;
@@ -3543,6 +3764,20 @@ begin
     IsNullBrush := True;
   CBrush:= BBrush;
   SetBrushColor;
+end;
+
+procedure TEMWParser.DoGdiComment(Data: PEMRGDIComment);
+var
+  D: TBytes;
+begin
+
+  SetLength(D,Data^.cbData);
+  if Data^.cbData > 0 then
+  begin
+    Move(Data^.Data,D[0],Data^.cbData);
+//    OutputDebugString(PChar( StringOf(D) ));
+    FCanvas.Comment( PAnsiChar (@D[0]) );
+  end;
 end;
 
 procedure TEMWParser.DoSmallTextOut ( Data: PEMRSMALLTEXTOUTA );
@@ -3781,6 +4016,7 @@ begin
   end
   else
     it := False;
+
   P := IP ( Data, Data^.offBmiSrc );
   O := IP ( Data, Data^.offBitsSrc );
   B := TBitmap.Create;
@@ -3817,4 +4053,3 @@ initialization
 {$ENDIF}
 
 end.
-

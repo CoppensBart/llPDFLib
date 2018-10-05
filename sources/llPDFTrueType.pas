@@ -100,6 +100,7 @@ type
     FUnitsPerEm: Integer;
     FLast: Integer;
     FGlyphsLoaded: Boolean;
+    FPermitEmbedding: Boolean;
     OTM: OUTLINETEXTMETRIC;
     FFontName: String;
     FFontStyle: TFontStyles;
@@ -915,6 +916,7 @@ begin
   FillChar ( OTM, SizeOf ( OTM ), 0 );
   OTM.otmSize := SizeOf ( OTM );
   GetOutlineTextMetrics ( DC, SizeOf ( OTM ), @OTM );
+  FPermitEmbedding := (OTM.otmfsType and $8000) <> 0;
   GlyphCount := Swap(PMaxp_Table_Header(FTables.Maxp.Table).numGlyphs);
   FUnitsPerEm :=Swap(PHeadRec(FTables.Head.Table)^.unitsPerEm);
   SetLength(FGlyphsList,GlyphCount);
@@ -940,7 +942,10 @@ procedure TTrueTypeManager.LoadGlyphsInfo(DC:HDC);
 var
   i, GlyphCount: integer;
 begin
+// if FPermitEmbedding then
+// raise 'this font cant be embeded!'
   GlyphCount :=  Length(FGlyphsList);
+
   LoadOneTable(DC,'loca',FTables.Loca);
   LoadOneTable(DC,'glyf',FTables.Glyf);
   LoadOneTable(DC,'cvt ',FTables.Cvt, true);
@@ -948,7 +953,7 @@ begin
   LoadOneTable(DC,'prep',FTables.Prep, true);
   LoadOneTable(DC,'post',FTables.Post);
 
-   if Swap(PHeadRec(FTables.Head.Table)^.indexToLocFormat) = 1 then //  Long FormatOffset
+  if Swap(PHeadRec(FTables.Head.Table)^.indexToLocFormat) = 1 then //  Long FormatOffset
   begin
     for i := 0 to GlyphCount - 1 do
     begin
@@ -956,7 +961,8 @@ begin
       FGlyphsList[i].Size := ByteSwap(PCardinalArray(FTables.Loca.Table)[i+1]) -
         ByteSwap(PCardinalArray(FTables.Loca.Table)[i]);
     end;
-  end else
+  end
+  else
   begin
     for i := 0 to GlyphCount - 1 do
     begin
@@ -964,6 +970,8 @@ begin
       FGlyphsList[i].size := (Swap(PWordArray(FTables.Loca.Table)[i+1]) - swap(PWordArray(FTables.Loca.Table)[i])) shl 1;
     end;
   end;
+
+
   FGlyphsLoaded := true;
 end;
 
@@ -983,7 +991,8 @@ begin
     Table.Table := nil;
     if CanIgnore then
       Exit;
-    raise ETTFException.Create('Cannot receive TTF info');
+
+    raise ETTFException.Create('Cannot receive TTF info for "'+FFontName+'"');
   end;
   Table.Table := GetMemory(SZ);
   SZ := GetFontData(DC,TN,0,Table.Table,SZ);
@@ -994,7 +1003,8 @@ begin
     Table.Size := 0;
     if CanIgnore then
       Exit;
-    raise ETTFException.Create('Cannot receive TTF info');
+
+    raise ETTFException.Create('Cannot receive TTF info for "'+FFontName+'"');
   end;
   Table.Size := sz;
 end;
