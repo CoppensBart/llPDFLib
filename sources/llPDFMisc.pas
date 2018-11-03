@@ -1,12 +1,12 @@
 {**************************************************
-                                                  
-                   llPDFLib                       
-      Version  6.4.0.1389,   09.07.2016            
-     Copyright (c) 2002-2016  Sybrex Systems      
+
+                   llPDFLib
+      Version  6.4.0.1389,   09.07.2016
+     Copyright (c) 2002-2016  Sybrex Systems
      Copyright (c) 2002-2016  Vadim M. Shakun
-               All rights reserved                
-           mailto:em-info@sybrex.com              
-                                                  
+               All rights reserved
+           mailto:em-info@sybrex.com
+
 **************************************************}
 
 unit llPDFMisc;
@@ -109,7 +109,6 @@ type
   function DataToHex(Buffer:Pointer;Len:Cardinal):AnsiString;
 
   procedure StrAddTruncAt(Source:AnsiString; var Destination: AnsiString; APos: Integer; IncVal: Byte = 0);
-
 type
 {$ifdef UNICODE}
   PAnsiStringItem = ^TAnsiStringItem;
@@ -197,7 +196,6 @@ type
 
 function log32(x: Cardinal): Integer;
 function flp2(x:Cardinal):Cardinal;
-
 
 implementation
 
@@ -287,10 +285,6 @@ begin
   end;
   result :=  i;
 end;
-
-
-
-
 
 function PosText ( const FindString, SourceString: AnsiString; StartPos: Integer ): Integer;
 var
@@ -505,7 +499,6 @@ function GMTNow: TDateTime;
 begin
   Result := LocaleToGMT(Now);
 end;
-
 
 {$ifndef UNICODE}
 function UnicodeChar ( Text: string; Charset: TFontCharset ): string;
