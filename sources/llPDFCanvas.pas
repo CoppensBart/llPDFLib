@@ -270,9 +270,9 @@ type
     procedure RawRect(X, Y, W, H: Extended);
     procedure RawRectRotated(X, Y, W, H, Angle: Extended);
     procedure RawSetTextPosition(X, Y, Orientation: Extended);
-    procedure RawShowImage(ImageIndex: Integer; X, Y, W, H, Angle: Extended);
+    procedure RawShowImage(ImageIndex: Integer; X, Y, W, H, Angle: Extended; ShearX,ShearY: Double);
     procedure RawTextOut(X, Y, Orientation: Extended; TextStr: AnsiString);
-    procedure RawTranslate(XT, YT: Extended);
+    procedure RawTranslate(XT, YT, Sx, Sy: Extended);
     procedure RawWideTextOut(X, Y, Orientation: Extended; WideText: WideString);
     procedure SetHeight(const Value: Integer);virtual;
     procedure SetIntCharacterSpacing(Spacing: Extended);
@@ -874,6 +874,8 @@ type
     ///   Image rotation angle
     /// </param>
     procedure ShowImage(ImageIndex: Integer; X, Y, W, H, Angle: Extended);overload;
+
+    procedure ShowImage(ImageIndex: Integer; X, Y, W, H: Extended; ShearX, ShearY: Double);overload;
     /// <summary>
     ///   This function strokes the current paths by the current stroke color and current linewidth.
     /// </summary>
@@ -1161,6 +1163,7 @@ type
     procedure SetThumbnail(const Value: Integer);
     procedure SetWidth( const Value: Integer);override;
     procedure SetHeight( const Value: Integer);override;
+    function GetClientRect: TRect;
   protected
     procedure Save; override;
   public
@@ -1231,7 +1234,7 @@ type
     ///   X coordinate from which will be displayed metafile
     /// </param>
     /// <param name="Y">
-    ///   Y coordinate from which will be displayed metafile 
+    ///   Y coordinate from which will be displayed metafile
     /// </param>
     /// <param name="XScale">
     ///   Level of compression across the width
@@ -1241,7 +1244,7 @@ type
     /// </param>
     procedure PlayForm(Form: TPDFForm; X, Y, XScale, YScale: Extended);
     /// <summary>
-    ///   Set a pattern in the form which closed areas will be filled with    
+    ///   Set a pattern in the form which closed areas will be filled with
     /// </summary>
     /// <param name="Pattern">
     ///   Object specifying the pattern
@@ -1263,6 +1266,7 @@ type
     ///   Standard canvas, which has HDC and can be used for GDI functions
     /// </summary>
     property Canvas: TCanvas read FCanvas;
+    property ClientRect: TRect read GetClientRect;
     /// <summary>
     ///   Page orientation
     /// </summary>
@@ -2813,8 +2817,7 @@ begin
   TP.y := Y;
 end;
 
-procedure TPDFCanvas.RawShowImage(ImageIndex: Integer; X, Y, W, H, Angle:
-        Extended);
+procedure TPDFCanvas.RawShowImage(ImageIndex: Integer; X, Y, W, H, Angle: Extended; ShearX,ShearY: Double);
 var
   i, idx: Integer;
   fnd: Boolean;
@@ -2847,9 +2850,15 @@ begin
     FLinkedImages[idx] := Eng.Resources.Images [ ImageIndex ] as TPDFImage;
   end;
   GStateSave;
-  RawTranslate ( x, y );
+
   if Abs ( angle ) > 0.001 then
-    Rotate ( angle );
+    begin
+      RawConcat ( 1, 0, 0, 1, x, y );
+      Rotate ( angle );
+    end
+  else
+    RawConcat ( 1, ShearX, ShearY, 1, X, Y);
+
   RawConcat ( w, 0, 0, h, 0, 0 );
   AppendAction ( '/Img' + IStr(idx)  + ' Do' );
   GStateRestore;
@@ -2862,7 +2871,7 @@ begin
   TextShow ( TextStr );
 end;
 
-procedure TPDFCanvas.RawTranslate(XT, YT: Extended);
+procedure TPDFCanvas.RawTranslate(XT, YT, Sx, Sy: Extended);
 begin
   RawConcat ( 1, 0, 0, 1, xt, yt );
 end;
@@ -3243,7 +3252,14 @@ end;
 procedure TPDFCanvas.ShowImage(ImageIndex: Integer; x, y, w, h, angle: Extended);
 begin
   if ( w = 0 ) or ( h = 0 ) then Exit;
-  RawShowImage ( ImageIndex, ExtToIntX ( X ), ExtToIntY ( y ) - h / d2p, w / d2p, h / d2p, angle );
+  RawShowImage ( ImageIndex, ExtToIntX ( X ), ExtToIntY ( y ) - h / d2p, w / d2p, h / d2p, angle ,0, 0 );
+end;
+
+procedure TPDFCanvas.ShowImage(ImageIndex: Integer; X, Y, W, H: Extended; ShearX, ShearY: Double);
+begin
+  if ( w = 0 ) or ( h = 0 ) then Exit;
+
+  RawShowImage ( ImageIndex, ExtToIntX ( X ), ExtToIntY ( y ) - h / d2p, w / d2p, h / d2p, 0, ShearX, ShearY );
 end;
 
 procedure TPDFCanvas.Stroke;
@@ -3524,7 +3540,7 @@ end;
 
 procedure TPDFCanvas.Translate(XT, YT: Extended);
 begin
-  RawTranslate ( ExtToIntX ( XT ), ExtToIntY ( YT ) );
+  RawTranslate ( ExtToIntX ( XT ), ExtToIntY ( YT ) ,0 ,0 );
 end;
 
 procedure TPDFCanvas.WideTextOut(X, Y, Orientation: Extended; WideText:WideString);
@@ -3888,6 +3904,11 @@ begin
   for i:= 0 to Length(FAnnotations) -1 do
     FAnnotations[i].Free;
   inherited;
+end;
+
+function TPDFPage.GetClientRect: TRect;
+begin
+  Result := FCanvas.ClipRect;
 end;
 
 procedure TPDFPage.Save;

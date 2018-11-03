@@ -494,7 +494,7 @@ begin
   ReferrenceDC := CreateDC(
    'WINSPOOL',PChar(Printer.Printers[Printer.PrinterIndex]),nil,nil);
 
-//  EMFOptions.UsedDC := ReferrenceDC;
+  EMFOptions.UsedDC := ReferrenceDC;
   DeleteDC(ReferrenceDC);
 
   Printer.PrinterIndex := SavedPrinterIndex;
