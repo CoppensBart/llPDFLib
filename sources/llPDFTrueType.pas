@@ -392,6 +392,7 @@ begin
     obj := CreateFontIndirect ( Font );
     try
       SelectObject ( DC, Obj );
+//      SZ := GetFontData(DC,TN,0,nil,0);
       Action(DC);
     finally
       DeleteObject(Obj);
@@ -894,6 +895,8 @@ begin
   FIsMono := ( M.tmPitchAndFamily and TMPF_FIXED_PITCH ) = 0;
   FAscent := M.tmAscent;
   FDescent := M.tmDescent;
+
+
   LoadOneTable(DC,'cmap',FTables.Cmap);
   LoadOneTable(DC,'hmtx',FTables.hmtx);
   LoadOneTable(DC,'maxp',FTables.Maxp);

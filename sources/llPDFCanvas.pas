@@ -4887,6 +4887,7 @@ begin
         CS.Free;
       end;
       Eng.SaveToStream ( '/Length ' + IStr ( CalcAESSize( Eng.SecurityInfo.State,MS.size ) ) );
+      Eng.SaveToStream ( '/Filter /FlateDecode' );
       Eng.StartStream;
       MS.Position := 0;
       CryptStreamToStream ( Eng.SecurityInfo,MS, Eng.Stream, ID );

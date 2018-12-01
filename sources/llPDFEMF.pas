@@ -99,6 +99,7 @@ type
     idx: TPDFPattern;
     Hatch: Integer;
     BGColor: Cardinal;
+    BGMode: Boolean;
     Color: Cardinal;
   end;
 
@@ -140,7 +141,6 @@ type
     SBM: Integer;
     com: Integer;
     IsNullBrush: Boolean;
-    IsSolidBrush: Boolean;
     CWPS: TSize;
     CurRec: Integer;
     FCha: Boolean;
@@ -427,6 +427,7 @@ begin
   begin
     if (FHatchedPatterns[I].Hatch = CBrush.lbHatch) and
        (FHatchedPatterns[I].BGColor = BGColor) and
+       (FHatchedPatterns[I].BGMode = BGMode) and
        (FHatchedPatterns[I].Color = CBrush.lbColor) then
     begin
       Pattern := FHatchedPatterns[I].idx;
@@ -441,75 +442,66 @@ begin
     FHatchedPatterns[Len].Hatch := CBrush.lbHatch;
     FHatchedPatterns[Len].BGColor := BGColor;
     FHatchedPatterns[Len].Color := CBrush.lbColor;
+    FHatchedPatterns[Len].BGMode :=  BGMode;
     Pattern := FHatchedPatterns[Len].idx;
     FPatterns.Add(Pattern);
     Pattern.Width := 4;
     Pattern.Height := 4;
     Pattern.XStep := 4;
     Pattern.YStep := 4;
-    with Pattern do
+
+    if BGMode then
     begin
-
-      if BGMode or IsSolidBrush then
-      begin
-        NewPath;
-        Rectangle(0, 0, 4, 4);
-
-        if IsSolidBrush then
-          SetColorFill(ColorToPDFColor(CBrush.lbColor))
-        else
-          SetColorFill(ColorToPDFColor(BGColor));
-
-        Fill;
-      end;
-
-      if not IsSolidBrush then
-      begin
-        NewPath;
-        SetColorStroke(ColorToPDFColor(CBrush.lbColor));
-        SetLineWidth(0.3);
-
-        case CBrush.lbHatch of
-          HS_VERTICAL:
-            begin
-              MoveTo(2, 0);
-              LineTo(2, 4);
-            end;
-          HS_HORIZONTAL:
-            begin
-              MoveTo(0, 2);
-              LineTo(4, 2);
-            end;
-          HS_FDIAGONAL:
-            begin
-              MoveTo(0, 0);
-              LineTo(4, 4);
-            end;
-          HS_BDIAGONAL:
-            begin
-              MoveTo(4, 0);
-              LineTo(0, 4);
-            end;
-          HS_CROSS:
-            begin
-              MoveTo(2, 0);
-              LineTo(2, 4);
-              MoveTo(0, 2);
-              LineTo(4, 2);
-            end;
-           HS_DIAGCROSS:
-            begin
-              MoveTo(0, 0);
-              LineTo(4, 4);
-              MoveTo(4, 0);
-              LineTo(0, 4);
-            end;
-        end;
-
-        Stroke;
-      end;
-
+      Pattern.NewPath;
+      Pattern.Rectangle(0, 0, 4, 4);
+      Pattern.SetColorFill(ColorToPDFColor(BGColor));
+      Pattern.Fill;
     end;
+
+
+    Pattern.NewPath;
+    Pattern.SetColorStroke(ColorToPDFColor(CBrush.lbColor));
+    Pattern.SetLineWidth(0);
+
+    case CBrush.lbHatch of
+      HS_VERTICAL:
+        begin
+          Pattern.MoveTo(2, 0);
+          Pattern.LineTo(2, 4);
+        end;
+      HS_HORIZONTAL:
+        begin
+          Pattern.MoveTo(0, 2);
+          Pattern.LineTo(4, 2);
+        end;
+      HS_FDIAGONAL:
+        begin
+          Pattern.MoveTo(0, 0);
+          Pattern.LineTo(4, 4);
+        end;
+      HS_BDIAGONAL:
+        begin
+          Pattern.MoveTo(4, 0);
+          Pattern.LineTo(0, 4);
+        end;
+      HS_CROSS:
+        begin
+          Pattern.MoveTo(2, 0);
+          Pattern.LineTo(2, 4);
+          Pattern.MoveTo(0, 2);
+          Pattern.LineTo(4, 2);
+        end;
+       HS_DIAGCROSS:
+        begin
+          Pattern.MoveTo(0, 0);
+          Pattern.LineTo(4, 4);
+          Pattern.MoveTo(4, 0);
+          Pattern.LineTo(0, 4);
+        end;
+    end;
+
+    Pattern.Stroke;
+
   end;
 
   if FCanvas is TPDFPage then
@@ -2244,13 +2236,13 @@ begin
         SetBrushColor;
     end;
   end;
+
   if NBrush.lbStyle = 1 then
     IsNullBrush := True;
-  if NBrush.lbStyle = BS_HATCHED then
-  begin
-    CBrush.lbStyle := BS_HATCHED;
-    CBrush.lbHatch := NBrush.lbHatch;
-  end;
+
+
+  CBrush.lbStyle := NBrush.lbStyle;
+  CBrush.lbHatch := NBrush.lbHatch;
 
   // Check Font
   H := GetCurrentObject(DC, OBJ_FONT);
@@ -2430,13 +2422,8 @@ begin
             if NBrush.lbStyle = BS_NULL then
               IsNullBrush := True;
 
-            IsSolidBrush := NBrush.lbStyle = BS_SOLID;
-
-            if NBrush.lbStyle = BS_HATCHED then
-            begin
-              CBrush.lbStyle := BS_HATCHED;
-              CBrush.lbHatch := NBrush.lbHatch;
-            end;
+            CBrush.lbStyle := NBrush.lbStyle;
+            CBrush.lbHatch := NBrush.lbHatch;
 
           end;
         end;
@@ -3112,6 +3099,8 @@ begin
     Rp := False;
   if (S = 'HELVETICA') and (CFont.lfCharSet <> 0) then
     Rp := True;
+  if AnsiContainsText(S,'COURIER NEW ') and (CFont.lfCharSet <> 0) then
+    Rp := True;
   if S = 'SYMBOL' then
     Rp := False;
   if S = 'WINGDINGS' then
@@ -3151,7 +3140,10 @@ begin
     FCanvas.SetActiveFont(String(CFont.lfFaceName), St, FS * FY, 0)
   else
   begin
-    if S = 'COURIER' then
+    if (S = 'COURIER') then
+      FCanvas.SetActiveFont('Courier New', St, FS * FY, CFont.lfCharSet)
+    else
+    if AnsiContainsText(S,'COURIER NEW ') then
       FCanvas.SetActiveFont('Courier New', St, FS * FY, CFont.lfCharSet)
     else if S = 'TIMES' then
       FCanvas.SetActiveFont('Times New Roman', St, FS * FY, CFont.lfCharSet)
