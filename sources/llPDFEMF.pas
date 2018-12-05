@@ -1330,7 +1330,8 @@ var
     if IsNullBrush then
       begin
         FCanvas.SetTextRenderingMode(1);
-        FCanvas.AppendAction( AnsiString(IntToStr(Round(CPen.lopnWidth)) + ' w'));
+
+        FCanvas.AppendAction( AnsiString( FormatFloat ( CalX * CPen.lopnWidth ) + ' w'));
       end
     else
     if CPen.lopnStyle = PS_NULL then
