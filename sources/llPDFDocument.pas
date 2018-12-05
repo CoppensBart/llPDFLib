@@ -642,7 +642,8 @@ begin
   if not FPrinting then
     raise EPDFException.Create ( SGenerationPDFFileNotActivated );
   Result := FPages.CurrentPage;
-end;
+
+  end;
 
 function TPDFDocument.GetCurrentPageIndex: Integer;
 begin
@@ -821,9 +822,6 @@ procedure TPDFDocument.StoreDocument;
 var
   i: Integer;
   CatalogID, InfoID, EncryptID, MetaID: Integer;
-{$IFDEF PDF_CANVAS_DEBUG}
-  Dbg: TMemoryStream;
-{$ENDIF}
 begin
   InfoID := FEngine.GetNextID;
   FDocumentInfo.Save(InfoID, FEngine);
@@ -911,16 +909,6 @@ begin
   FEngine.SaveXREFAndTrailer( CatalogID, InfoID, EncryptID, FEngine.FileID);
   if Assigned(FDigSignature) then
     FEngine.SaveAdditional(FDigSignature);
-
-{$IFDEF PDF_CANVAS_DEBUG}
-  Dbg:= TMemoryStream.Create();
-  try
-    Dbg.CopyFrom(FEngine.Stream,0);
-    Dbg.SaveToFile( debugLogsDirectory + IntToStr ( iii ) + '.pdf.txt' );
-  finally
-    FreeAndNil(Dbg);
-  end;
-{$ENDIF}
 end;
 
 procedure TPDFDocument.SetCompression(const Value: TCompressionType);

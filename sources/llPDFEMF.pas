@@ -128,6 +128,7 @@ type
     HorMode: THorJust;
     UpdatePos: Boolean;
     Clipping: Boolean;
+    InTextPath: Boolean;
     CCW: Boolean;
     CPen: TPDFPen;
     CBrush: TLogBrush;
@@ -462,6 +463,7 @@ begin
     Pattern.NewPath;
     Pattern.SetColorStroke(ColorToPDFColor(CBrush.lbColor));
     Pattern.SetLineWidth(0);
+    Pattern.SetLineCap(lcProjectingSquare);
 
     case CBrush.lbHatch of
       HS_VERTICAL:
@@ -507,11 +509,13 @@ begin
   if FCanvas is TPDFPage then
   begin
     TPDFPage(FCanvas).SetPattern(Pattern);
+    FIsPattern := True;
   end;
 
   if FCanvas is TPDFForm then
   begin
     TPDFForm(FCanvas).SetPattern(Pattern);
+    FIsPattern := True;
   end;
 end;
 
@@ -586,6 +590,10 @@ procedure TEMWParser.DoBeginPath;
 begin
   InPath := True;
   FCanvas.NewPath;
+
+  if InTextPath then
+    FCanvas.GStateSave;
+
   FCanvas.MoveTo(GX(CurVal.x), GY(CurVal.y));
 end;
 
@@ -840,6 +848,9 @@ end;
 procedure TEMWParser.DoEndPath;
 begin
   InPath := False;
+
+  if InTextPath then
+    FCanvas.GStateRestore;
 end;
 
 procedure TEMWParser.DoExcludeClipRect(Data: PEMRExcludeClipRect);
@@ -1311,6 +1322,24 @@ var
 
   end;
 
+  procedure CheckTextRenderMode();
+  begin
+    if not InTextPath then
+      Exit;
+
+    if IsNullBrush then
+      begin
+        FCanvas.SetTextRenderingMode(1);
+        FCanvas.AppendAction( AnsiString(IntToStr(Round(CPen.lopnWidth)) + ' w'));
+      end
+    else
+    if CPen.lopnStyle = PS_NULL then
+    begin
+      FCanvas.SetTextRenderingMode(0);
+    end;
+
+  end;
+
 begin
   RestoreClip := False;
   ChkBG := False;
@@ -1391,6 +1420,8 @@ begin
 {$ENDIF}
       if not IsGlyphs then
       begin
+        CheckTextRenderMode;
+
         if PIN <> nil then
           FCanvas.ExtWideTextOut(x, y, CFont.lfEscapement / 10 * YRotate, makeWideString(@UK[0], Len), @Ext[0])
         else
@@ -1398,6 +1429,8 @@ begin
       end
       else
       begin
+        CheckTextRenderMode;
+
         if (PIN <> nil) { and (not ZeroGlyph) } then
         begin
           FCanvas.ExtGlyphTextOut(x, y, CFont.lfEscapement / 10 * YRotate, @UK[0], Len, @Ext[0]);
@@ -2229,17 +2262,13 @@ begin
   else
   begin
     FIsPattern := False;
-    if NBrush.lbColor <> CBrush.lbColor then
-    begin
-      CBrush.lbColor := NBrush.lbColor;
-      if not InText then
-        SetBrushColor;
-    end;
+    CBrush.lbColor := NBrush.lbColor;
+    if not InText then
+      SetBrushColor(False);
   end;
 
   if NBrush.lbStyle = 1 then
     IsNullBrush := True;
-
 
   CBrush.lbStyle := NBrush.lbStyle;
   CBrush.lbHatch := NBrush.lbHatch;
@@ -2373,6 +2402,7 @@ begin
         begin
           IsNullBrush := False;
           GetObject(HandlesTable[Data^.ihObject], SizeOf(NBrush), @NBrush);
+
           if (NBrush.lbStyle = BS_DIBPATTERN) or (NBrush.lbStyle = BS_DIBPATTERN8x8) then
           begin
             for I := 0 to Length(FPat) - 1 do
@@ -2412,19 +2442,16 @@ begin
           begin
             FIsPattern := False;
 
-            if NBrush.lbColor <> CBrush.lbColor then
-            begin
-              CBrush.lbColor := NBrush.lbColor;
-              if not InText then
-                SetBrushColor;
-            end;
+            CBrush.lbColor := NBrush.lbColor;
+            if not InText then
+              SetBrushColor(False);
+
 
             if NBrush.lbStyle = BS_NULL then
               IsNullBrush := True;
 
             CBrush.lbStyle := NBrush.lbStyle;
             CBrush.lbHatch := NBrush.lbHatch;
-
           end;
         end;
       OBJ_FONT:
@@ -3178,6 +3205,9 @@ end;
 procedure TEMWParser.SetInPath(const Value: Boolean);
 begin
   FInPath := Value;
+
+  if not Value and InTextPath then
+    InTextPath := False;
 end;
 
 procedure TEMWParser.PFillAndStroke;
@@ -3224,7 +3254,16 @@ procedure TEMWParser.SetInText(const Value: Boolean);
 begin
   if FInText = Value then
     Exit;
+
+  if InTextPath and Value then
+    FCanvas.GStateSave
+  else
+  if InTextPath and not Value then
+    FCanvas.GStateRestore;
+
   FInText := Value;
+
+
   if not Value then
   begin
     SetBrushColor;
@@ -3641,15 +3680,24 @@ end;
 procedure TEMWParser.ExecuteRecord(Data: PEnhMetaRecord);
 begin
   if InPath and (Data^.iType in [EMR_EXTTEXTOUTA, EMR_EXTTEXTOUTW, EMR_SMALLTEXTOUT]) then
-    Exit;
+  begin
+    InTextPath := True;
+  end;
+
   if InText then
     if not(Data^.iType in [EMR_EXTTEXTOUTA, EMR_EXTTEXTOUTW, EMR_SELECTOBJECT, EMR_BITBLT, EMR_CREATEBRUSHINDIRECT,
       EMR_CREATEPEN, EMR_SAVEDC, EMR_RESTOREDC, EMR_SETTEXTALIGN, EMR_SETBKMODE, EMR_EXTCREATEFONTINDIRECTW,
       EMR_SMALLTEXTOUT, EMR_DELETEOBJECT, EMR_SETTEXTCOLOR, EMR_MOVETOEX, EMR_SETBKCOLOR]) then
       InText := False;
+
   if (Data^.iType in [EMR_EXTTEXTOUTA, EMR_EXTTEXTOUTW, EMR_SMALLTEXTOUT]) then
     if not InText then
+    begin
+
       InText := True;
+    end;
+
+
   case Data^.iType of
     EMR_SETWINDOWEXTEX:
       DoSetWindowExtEx(PEMRSetViewportExtEx(Data));

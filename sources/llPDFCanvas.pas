@@ -2962,6 +2962,9 @@ begin
     ( FontSize <> FCurrentFontSize ) or ( not FIsTrueType )then
   begin
     FCurrentFontName := FontName;
+    if FontSize = 0 then
+      FontSize := 1;
+
     FCurrentFontSize := FontSize;
     FCurrentFontStyle := FontStyle;
     FFontIsChanged := True;
