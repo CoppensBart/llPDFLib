@@ -13,7 +13,9 @@ demo/__history/*
 *.exe
 *.identcache
 *.stat
+dpk/*.local
 dpk/*.stat
+dpk/*.identcache
 demo/*.stat
 *CVS*
 .cvsignore
@@ -22,3 +24,4 @@ demo/*.stat
 *.~1~
 sources/__history/*
 help/*
+
