@@ -190,7 +190,67 @@ type
   end;
 
   /// <summary>
-  ///   This is the base class for appearance of the canvas to be displayed on a raster output device,
+  ///   This is the base class for implementation display of real-world units
+  ///   corresponding to objects on a page.
+  /// </summary>
+  TPDFViewPort = class( TPDFObject )
+   private
+   // page coordinates
+    FMinX,FMinY,
+    FMaxX,FMaxY,
+   // world coordinates
+    FWorldMinX, FWorldMinY,
+    FWorldMaxX, FWorldMaxY: Extended;
+    FDesctiption: string;
+    FCRS: string;
+    FCRSProjected: Boolean;
+    procedure SetCRS(const Value: string);
+   protected
+    procedure Save; override;
+   public
+    constructor Create(Engine: TPDFEngine);
+    function Validate: Boolean;
+    property Desctiption: string read FDesctiption write FDesctiption;
+    /// <summary>
+    ///   minimal x coordinate of viewport rectangle in page units
+    /// </summary>
+    property MinX: Extended read FMinX write FMinX;
+    /// <summary>
+    ///   minimal y coordinate of viewport rectangle in page units
+    /// </summary>
+    property MinY: Extended read FMinY write FMinY;
+    /// <summary>
+    ///   maximum x coordinate of viewport rectangle in page units
+    /// </summary>
+    property MaxX: Extended read FMaxX write FMaxX;
+    /// <summary>
+    ///   maximum y coordinate of viewport rectangle in page units
+    /// </summary>
+    property MaxY: Extended read FMaxY write FMaxY;
+    /// <summary>
+    ///   minimal x coordinate of viewport rectangle in crs units
+    /// </summary>
+    property WorldMinX: Extended read FWorldMinX write FWorldMinX;
+    /// <summary>
+    ///   minimal y coordinate of viewport rectangle in crs units
+    /// </summary>
+    property WorldMinY: Extended read FWorldMinY write FWorldMinY;
+    /// <summary>
+    ///   maximum x coordinate of viewport rectangle in crs units
+    /// </summary>
+    property WorldMaxX: Extended read FWorldMaxX write FWorldMaxX;
+    /// <summary>
+    ///   maximum y coordinate of viewport rectangle in crs units
+    /// </summary>
+    property WorldMaxY: Extended read FWorldMaxY write FWorldMaxY;
+    /// <summary>
+    ///   coordinate system definition in wellknown text format
+    /// </summary>
+    property CRS: string read FCRS write SetCRS;
+  end;
+
+  /// <summary>
+  ///   This is the base class for appearance of the canvas to be displayed on a raster output device.
   /// </summary>
   TPDFCanvas = class(TPDFObject)
   private
@@ -3924,10 +3984,13 @@ var
 begin
   if FBCDStart then
      TurnOffOptionalContent;
+
   if FTextInited then
     EndText;
+
   for I := FSaveCount downto 1 do
     GStateRestore;
+
   FSaveCount := 2;
   GStateRestore;
 
@@ -3936,10 +3999,12 @@ begin
 
   for I := 0 to Length( FAnnotations) - 1 do
     FAnnotations [ I ] .Save;
+
   ResourseID := Eng.GetNextID;
   Eng.StartObj( ResourseID);
 
   if Eng.PDFACompatibile then
+  begin
     if FRGBUsed or FGrayUsed or FCMYKUsed then
     begin
       Eng.SaveToStream('/ColorSpace <<');
@@ -3951,62 +4016,80 @@ begin
         Eng.SaveToStream('/DefaultCMYK '+ GetRef( Eng.CMYKICCObject ));
       Eng.SaveToStream('>>');
     end;
+  end;
 
   Eng.SaveToStream ( '/ProcSet [/PDF ', False );
   if FTextUsed then
     Eng.SaveToStream ( '/Text ', False );
+
   if FGrayUsed then
     Eng.SaveToStream ( '/ImageB ', False );
+
   if FColorUsed then
     Eng.SaveToStream ( '/ImageC ', False );
+
   Eng.SaveToStream ( ']' );
+
   if Length ( FLinkedFont ) > 0 then
   begin
     Eng.SaveToStream ( '/Font <<' );
+
     for I := 0 to Length ( FLinkedFont ) - 1 do
-        Eng.SaveToStream ( '/' + FLinkedFont [ I ].AliasName + ' ' + FLinkedFont [ I ].RefID );
+      Eng.SaveToStream ( '/' + FLinkedFont [ I ].AliasName + ' ' + FLinkedFont [ I ].RefID );
+
     Eng.SaveToStream ( '>>' );
   end;
 
   if Length ( FLinkedExtGState ) > 0 then
   begin
     Eng.SaveToStream ( '/ExtGState <<' );
+
     for I := 0 to Length ( FLinkedExtGState ) - 1 do
-        Eng.SaveToStream ( '/GS' + IStr( I ) +' '+ FLinkedExtGState [ I ].RefID );
+      Eng.SaveToStream ( '/GS' + IStr( I ) +' '+ FLinkedExtGState [ I ].RefID );
+
     Eng.SaveToStream ( '>>' );
   end;
 
   if Length ( FOP ) > 0 then
   begin
     Eng.SaveToStream ( '/Properties <<' );
+
     for I := 0 to Length ( FOP ) - 1 do
-        Eng.SaveToStream ( '/OC' + IStr( I ) +' '+ FOP [ I ].RefID );
+      Eng.SaveToStream ( '/OC' + IStr( I ) +' '+ FOP [ I ].RefID );
+
     Eng.SaveToStream ( '>>' );
   end;
 
   if Length ( FPatterns ) > 0 then
   begin
     Eng.SaveToStream ( '/Pattern <<' );
+
     for I := 0 to Length ( FPatterns ) - 1 do
-        Eng.SaveToStream ( '/Ptn' + IStr(I) + ' ' + FPatterns [ I ].RefID );
+      Eng.SaveToStream ( '/Ptn' + IStr(I) + ' ' + FPatterns [ I ].RefID );
+
     Eng.SaveToStream ( '>>' );
   end;
 
   if ( Length(FLinkedImages) > 0 ) or ( Length(FMeta) >0 ) or ( Length(FForms) >0 ) then
   begin
     Eng.SaveToStream ( '/XObject <<' );
+
     for I := 0 to Length(FLinkedImages) - 1 do
       Eng.SaveToStream ( '/Img' + IStr( I ) + ' ' + TPDFImage ( FLinkedImages [ I ] ).RefID );
+
     for I:=0 to Length(FForms) -1 do
       Eng.SaveToStream ( '/Frm' + IStr ( I ) + ' ' + FForms [ I ].RefID );
+
     for I:=0 to Length(FMeta) -1 do
       Eng.SaveToStream ( '/IF' + IStr ( I ) + ' ' + FMeta [ I ].RefID );
+
     Eng.SaveToStream ( '>>' );
   end;
   Eng.CloseObj;
 
   ContentID := Eng.GetNextID;
   Eng.StartObj ( ContentID );
+
   if Eng.Compression = ctFlate then
   begin
     MS := TMemoryStream.Create;
@@ -4025,13 +4108,15 @@ begin
     finally
       MS.Free;
     end;
-  end else
+  end
+  else
   begin
     S := FContent.Text;
     Eng.SaveToStream ( '/Length ' + IStr ( CalcAESSize(Eng.SecurityInfo.State, Length( S ) ) ) );
     Eng.StartStream;
     CryptStringToStream(Eng.SecurityInfo,Eng.Stream, S,ContentID );
   end;
+
   Eng.CloseStream;
   Eng.StartObj ( ID );
   Eng.SaveToStream ( '/Type /Page' );
@@ -4039,21 +4124,26 @@ begin
   Eng.SaveToStream ( '/MediaBox [0 0 ' + IStr ( FWidth ) + ' ' + IStr ( FHeight ) + ']' );
   if FThumbnail >= 0 then
     Eng.SaveToStream ( '/Thumb ' + Eng.Resources.Images[ FThumbnail ].RefID);
+
   case FRotate of
-      pr90: Eng.SaveToStream ( '/Rotate 90' );
-      pr180: Eng.SaveToStream ( '/Rotate 180' );
-      pr270: Eng.SaveToStream ( '/Rotate 270' );
-    end;
-    Eng.SaveToStream ( '/Resources ' + GetRef ( ResourseID )  );
-    Eng.SaveToStream ( '/Contents [' + GetRef ( ContentID ) + ']' );
+    pr90: Eng.SaveToStream ( '/Rotate 90' );
+    pr180: Eng.SaveToStream ( '/Rotate 180' );
+    pr270: Eng.SaveToStream ( '/Rotate 270' );
+  end;
+
+  Eng.SaveToStream ( '/Resources ' + GetRef ( ResourseID )  );
+  Eng.SaveToStream ( '/Contents [' + GetRef ( ContentID ) + ']' );
 
   if Length( FAnnotations) <> 0 then
   begin
     Eng.SaveToStream ( '/Annots [', false );
+
     for I := 0 to Length( FAnnotations) - 1 do
       Eng.SaveToStream ( FAnnotations [ I ] .RefID + ' ', false );
+
     Eng.SaveToStream ( ']' );
   end;
+
   Eng.CloseObj;
 end;
 
@@ -5201,6 +5291,46 @@ begin
       result := stANSI
     else
       result := stNeedUnicode;
+end;
+
+{ TPDFViewPort }
+
+constructor TPDFViewPort.Create(Engine: TPDFEngine);
+begin
+  inherited Create( Engine );
+  FCRS := '';
+  FMinX := 0;
+  FMinY := 0;
+  FMaxX := 0;
+  FMaxY := 0;
+
+  FWorldMinX := 0;
+  FWorldMinY := 0;
+  FWorldMaxX := 0;
+  FWorldMaxY := 0;
+end;
+
+procedure TPDFViewPort.Save;
+begin
+  if not Validate then
+    Exit;
+end;
+
+procedure TPDFViewPort.SetCRS(const Value: string);
+begin
+  if not SameText(FCRS,Value) then
+  begin
+    FCRS := Value;
+
+    FCRSProjected := Pos('PROJCS',FCRS) > 0;
+  end;
+end;
+
+function TPDFViewPort.Validate: Boolean;
+begin
+  Result := ( MaxX - MinX > 0 ) and ( MaxY - MinY > 0 ) and
+            ( WorldMinX - WorldMaxX > 0 )  and ( WorldMaxY - WorldMinY > 0 ) and
+            ( CRS <> '');
 end;
 
 end.

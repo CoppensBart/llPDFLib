@@ -137,7 +137,9 @@ type
     ClipRect: TExtRect;
     isCR: Boolean;
     FInText: Boolean;
-    FInPath: Boolean;
+    FInPath: Boolean;                                       
+    FInMaskStretchBlt: Boolean; // custom transparent stretchblt function support 
+    FMaskIndex: Integer;        // (see llPDFMisc.TransparentStretchBlt())
     MFH: THandle;
     SBM: Integer;
     com: Integer;
@@ -150,7 +152,7 @@ type
     XF: TXForm;
     TransfStack: array of TXForm;
     StackSize: Integer;
-    XOff, YOff, XScale, YScale: Extended;
+    XOff, YOff, XScale, YScale, Angle: Extended;
     WOX, VOX, WEX, VEX, WOY, VOY, WEY, VEY: Integer;
     VXNum, VYNum, VXDenom, VYDenom, WXNum, WYNum, WXDenom, WYDenom: Integer;
     HandlesCount: DWORD;
@@ -168,7 +170,7 @@ type
     DebugLog: TAnsiStringList;
     procedure SaveToLog(Data: PEnhMetaRecord);
 {$ENDIF}
-    function AddBitmap(BM: TBitmap): Integer;
+    function AddBitmap(BM: TBitmap; Mask: TBitmap = nil): Integer; overload;
     procedure PStroke;
     procedure PFillAndStroke;
     procedure CheckFill;
@@ -260,7 +262,7 @@ type
     procedure DoAlphaBlend(Data: PEMRAlphaBlend);
     procedure DoMaskBlt(Data: PEMRMaskBlt);
     procedure DoPlgBlt(Data: PEMRPLGBlt); //
-    procedure DoTransparentBLT(Data: PEMRTransparentBLT);
+    procedure DoTransparentBLT(Data: PEMRTransparentBLT); //
 
     // Create Indirect objects
     procedure DoCreateFontInDirectW(Data: PEMRExtCreateFontIndirect); //
@@ -662,7 +664,8 @@ var
   B: TBitmap;
   O: Pointer;
   P: PBitmapInfo;
-  I: Integer;
+//  I: Integer;
+  Kx,Ky, OfsX,OfsY, X,Y,H,W: Extended;
 begin
   if InText then
   begin
@@ -688,14 +691,31 @@ begin
       try
         if (P^.bmiHeader.biBitCount = 1) then
           B.Monochrome := True;
+
         B.Width := Data^.cxDest;
         B.Height := Data^.cyDest;
-        StretchDIBits(B.Canvas.Handle, 0, 0, B.Width, B.Height, Data^.xSrc, Data^.ySrc, B.Width, B.Height, O, P^,
-          Data^.iUsageSrc, SRCCOPY);
-        I := AddBitmap(B);
-        FCanvas.ShowImage(I, GX(Data^.rclBounds.Left, False), GY(Data^.rclBounds.Top, False),
-          GX(Data^.rclBounds.Right - Data^.rclBounds.Left + 1, False),
-          GY(Data^.rclBounds.Bottom - Data^.rclBounds.Top + 1, False), 0);
+        if StretchDIBits(B.Canvas.Handle, 0, 0, B.Width, B.Height, Data^.xSrc, Data^.ySrc, B.Width, B.Height, O, P^,
+          Data^.iUsageSrc, SRCCOPY) <> Integer(GDI_ERROR) then
+        begin
+            Kx :=   Abs( XScale * CalX );
+            Ky :=   Abs( YScale * CalY );
+
+            OfsX := XOff;
+            OfsY := YOff;
+
+            X := OfsX + ( MapX( Data^.xDest ) * Kx );
+            Y := OfsY + ( MapY( Data^.yDest ) * Ky );
+            W := MapX( Data^.cxDest ) * Kx;
+            H := MapY( Data^.cyDest ) * Ky;
+
+            FCanvas.ShowImage(AddBitmap(B), X,Y,W,H,0);
+
+    //      FCanvas.ShowImage(AddBitmap(B),
+    //        GX(Data^.rclBounds.Left, False), GY(Data^.rclBounds.Top, False),
+    //        GX(Data^.rclBounds.Right - Data^.rclBounds.Left + 1, False),
+    //        GY(Data^.rclBounds.Bottom - Data^.rclBounds.Top + 1, False), 0);
+
+        end;
       finally
         B.Free;
       end;
@@ -1569,11 +1589,11 @@ begin
       P := IP(Data, Data^.offBmiSrc);
       O := IP(Data, Data^.offBitsSrc);
 
-      OfsX := Gx(0);
-      OfsY := Gy(0);
+      Kx := Abs( XScale * CalX );
+      Ky := Abs( YScale * CalY );
 
-      Kx :=   XScale * CalX;
-      Ky :=   YScale * CalY;
+      OfsX := XOff;
+      OfsY := YOff;
 
       IsMonochrome := P^.bmiHeader.biBitCount = 1;
       biWidth := P^.bmiHeader.biWidth;
@@ -1626,8 +1646,7 @@ begin
         begin
           Factor1 :=   MapX(LpDest[1].X - LpDest[0].X) * Kx;
           Factor2 := - MapY(LpDest[1].Y - LpDest[0].Y) * Ky;
-          Ang := arctg(Factor1,Factor2);
-          Ang := RadToDeg(Ang);
+          Ang := RadToDeg(arctg(Factor1,Factor2));
 
           FCanvas.ShowImage(AddBitmap(B),
            OfsX + (MapX( xDest) * Kx),
@@ -2741,8 +2760,11 @@ procedure TEMWParser.DoSetWorldTransform(PWorldTransf: PEMRSetWorldTransform);
 begin
   XScale := PWorldTransf^.xform.eM11;
   YScale := PWorldTransf^.xform.eM22;
+  Angle := RadToDeg( arctg( PWorldTransf^.xform.eM11,PWorldTransf^.xform.eM12 ) );
+
   XOff := PWorldTransf^.xform.eDx * CalX;
   YOff := PWorldTransf^.xform.eDy * CalY;
+
   if XScale / YScale > 1 then
     FCanvas.SetFontWidthScale(1)
   else
@@ -2758,37 +2780,28 @@ var
   B, B1, BR: TBitmap;
   O: Pointer;
   P: PBitmapInfo;
-  I: Integer;
   BBB: HBITMAP;
   Width, Height: Integer;
   IsMonochrome: Boolean;
-  OfsX, OfsY, Kx, Ky: Extended;
+  OfsX, OfsY, Kx, Ky, X,Y,H,W: Extended;
+  Ct: TImageCompressionType;  
 begin
   if (Data^.offBmiSrc > 0) and (Data^.offBitsSrc > 0) then
   begin
     P := IP(Data, Data^.offBmiSrc);
     O := IP(Data, Data^.offBitsSrc);
 
-//    OfsX := MapX(0) * CalX;
-//    OfsY := MapY(0) * CalY;
-    OfsX := Gx(0);
-    OfsY := Gy(0);
+    Kx :=   Abs( XScale * CalX );
+    Ky :=   Abs( YScale * CalY );
 
-    Kx :=   XScale * CalX;
-    Ky :=   YScale * CalY;
+    OfsX := XOff;
+    OfsY := YOff;
 
-    {
-      if Self.FEMFOptions.Redraw = False then // this
-      begin
-      OfsX:= MapX(0) * CalX;
-      OfsY:= MapY(0) * CalY;
-      end
-      else
-      begin
-      OfsX := XOff;
-      OfsY := YOff;
-      end;
-    }
+    X := OfsX + ( MapX( Data^.xDest ) * Kx );
+    Y := OfsY + ( MapY( Data^.yDest ) * Ky );
+    W := MapX( Data^.cxDest ) * Kx;
+    H := MapY( Data^.cyDest ) * Ky;
+
     IsMonochrome := P^.bmiHeader.biBitCount = 1;
     Width := P^.bmiHeader.biWidth;
     Height := P^.bmiHeader.biHeight;
@@ -2796,6 +2809,7 @@ begin
     B := TBitmap.Create;
     try
       B.Monochrome := IsMonochrome;
+       
       B.Width := Width;
       B.Height := Height;
       StretchDIBits(B.Canvas.Handle, 0, 0, Width, Height, 0, 0, Width, Height, O, P^, Data^.iUsageSrc, SRCCOPY);
@@ -2803,53 +2817,74 @@ begin
       begin
         B1 := TBitmap.Create;
         try
-          if IsMonochrome then
-            BBB := CreateBitmap(Width, Height, 1, 1, nil)
+          if FInMaskStretchBlt or not IsMonochrome then
+            BBB := CreateCompatibleBitmap(DC, Width, Height)
           else
-            BBB := CreateCompatibleBitmap(DC, Width, Height);
+            BBB := CreateBitmap(Width, Height, 1, 1, nil);
+                        
           if BBB <> 0 then
           begin
             B1.Handle := BBB;
-            BR := B1;
-            StretchBlt(B1.Canvas.Handle, 0, 0, Width, Height, B.Canvas.Handle, 0, 0, Width, Height, Data^.dwRop);
+            
+            SetStretchBltMode(B1.Canvas.Handle,SBM);
+
+            if FInMaskStretchBlt then // just copy            
+              StretchBlt(B1.Canvas.Handle, 0, 0, Width, Height, B.Canvas.Handle, 0, 0, Width, Height, SRCCOPY)
+            else
+              StretchBlt(B1.Canvas.Handle, 0, 0, Width, Height, B.Canvas.Handle, 0, 0, Width, Height, Data^.dwRop);
+              
+            BR := B1;            
           end
           else
             BR := B;
 
-          if (Data^.rclBounds.Right - Data^.rclBounds.Left > 0) and
-            (Data^.rclBounds.Bottom - Data^.rclBounds.Top > 0) then
-          begin
-            I := AddBitmap(BR);
+           if FInMaskStretchBlt then 
+           begin
+             if FMaskIndex = -1 then
+             begin
+               FMaskIndex := FImages.AddImageAsMask(Br,Data^.crBkColorSrc);
+               Exit;
+             end
+             else
+             begin
+               if FMaskIndex > -1 then
+               begin
+                 if IsMonochrome then
+                   Ct := itcCCITT4
+                 else
+                 if not FEMFOptions.ColorImagesAsJPEG then
+                   Ct := itcFlate
+                 else  
+                  Ct := itcJpeg;               
+                  
+                 FCanvas.ShowImage(FImages.AddImageWithMask(Br,Ct,FMaskIndex),X,Y,W,H,0);                 
+               end;
+             end;
+           end
+           else            
+             FCanvas.ShowImage(AddBitmap(BR),X,Y,W,H,0);
 
-            FCanvas.ShowImage(I, OfsX + GX(Data^.xDest, False), OfsY + GY(Data^.yDest, False),
-              GX(Data^.cxDest, False), GY(Data^.cyDest, False), 0);
-          end;
+//          if (Data^.rclBounds.Right - Data^.rclBounds.Left > 0) and
+//            (Data^.rclBounds.Bottom - Data^.rclBounds.Top > 0) then
+//          begin
+//            FCanvas.ShowImage(AddBitmap(BR), OfsX + GX(Data^.xDest, False), OfsY + GY(Data^.yDest, False),
+//              GX(Data^.cxDest, False), GY(Data^.cyDest, False), 0);
+//          end;
         finally
           B1.Free;
         end;
       end
       else
       begin
-        if (Data^.rclBounds.Right - Data^.rclBounds.Left > 0) and (Data^.rclBounds.Bottom - Data^.rclBounds.Top > 0)
-        then
-        begin
-          I := AddBitmap(B);
-
-          FCanvas.ShowImage(I,
-           OfsX + (MapX( Data^.xDest) * Kx),
-           OfsY + (MapY( Data^.yDest )* Ky),
-           MapX( Data^.cxDest ) * Kx,
-           MapY( Data^.cyDest) * Ky,
-           0);
-
-{
-          FCanvas.ShowImage(I,
-            OfsX + GX(Data^.xDest, False),
-            OfsY + GY(Data^.yDest, False),
-            GX(Data^.cxDest, False),
-            GY(Data^.cyDest, False), 0);
-}
-        end;
+        FCanvas.ShowImage(AddBitmap(B),X,Y,W,H,0);
+//        if (Data^.rclBounds.Right - Data^.rclBounds.Left > 0) and
+//           (Data^.rclBounds.Bottom - Data^.rclBounds.Top > 0) then
+//          FCanvas.ShowImage(AddBitmap(B),
+//           OfsX + (MapX( Data^.xDest) * Kx),
+//           OfsY + (MapY( Data^.yDest )* Ky),
+//           MapX( Data^.cxDest ) * Kx,
+//           MapY( Data^.cyDest) * Ky,
+//           0);
       end;
 
     finally
@@ -3368,6 +3403,7 @@ begin
           YScale := XF.eM22;
           XOff := XF.eDx * CalX;
           YOff := XF.eDy * CalY;
+          Angle := RadToDeg( arctg( XF.eM11,XF.eM12 ) );
         end;
       MWT_RIGHTMULTIPLY:
         begin
@@ -3376,6 +3412,7 @@ begin
           YScale := XF.eM22;
           XOff := XF.eDx * CalX;
           YOff := XF.eDy * CalY;
+          Angle := RadToDeg( arctg( XF.eM11,XF.eM12 ) );
         end;
       4:
         begin
@@ -3384,6 +3421,8 @@ begin
           XOff := PWorldTransf^.xform.eDx * CalX;
           YOff := PWorldTransf^.xform.eDy * CalY;
           Move(PWorldTransf^.xform, XF, SizeOf(XF));
+
+          Angle := RadToDeg( arctg( PWorldTransf^.xform.eM11,PWorldTransf^.xform.eM12 ) );
         end;
     end;
     if XScale / YScale > 1 then
@@ -4113,15 +4152,43 @@ end;
 procedure TEMWParser.DoGdiComment(Data: PEMRGDIComment);
 var
   D: TBytes;
+  L: Integer;
+  CommandText: string;
+  V1,V2: Boolean;
 begin
-
-  SetLength(D, Data^.cbData);
-  if Data^.cbData > 0 then
+  L := Data^.cbData;
+  if L < 1 then Exit; 
+  SetLength(D, L);
   begin
     Move(Data^.Data, D[0], Data^.cbData);
-    // OutputDebugString(PChar( StringOf(D) ));
-    FCanvas.Comment(PANSIChar(@D[0]));
+    {$IFDEF XE}    
+    CommandText := StringOf(D);
+    {$ELSE}
+    SetLength(CommandText,L);
+    Move(D[0],CommandText,L);
+    {$ENDIF}
+    V1 := SameText(TransparentStretchBltStarted,CommandText);
+    V2 := SameText(TransparentStretchBltEnded,CommandText);
+    if V1 or V2 then
+    begin
+      if V1 then
+        begin
+          FInMaskStretchBlt := True;        
+          FMaskIndex := -1;        
+        end
+      else  
+      if V2 then
+      begin
+        FInMaskStretchBlt := False;        
+        FMaskIndex := -1;
+      end;        
+      Exit;
+    end;    
   end;
+  
+  // ignore internal gdi subsystem comments header
+  if StrLComp(PChar('GDIC'),PChar(CommandText),4) <> 0 then
+    FCanvas.Comment(PAnsiChar(@D[0]));
 end;
 
 procedure TEMWParser.DoSmallTextOut(Data: PEMRSmallTextOutA);
@@ -4362,9 +4429,10 @@ end;
 procedure TEMWParser.DoMaskBlt(Data: PEMRMaskBlt);
 var
   it: Boolean;
-  B: TBitmap;
+  B, Mask, Masked: TBitmap;
   O: Pointer;
   P: PBitmapInfo;
+  X,Y,W,H, OfsX,OfsY,Kx,Ky: Extended;
 begin
   if InText then
   begin
@@ -4377,31 +4445,98 @@ begin
   P := IP(Data, Data^.offBmiSrc);
   O := IP(Data, Data^.offBitsSrc);
   B := TBitmap.Create;
+  Mask := nil;
   try
     if (P^.bmiHeader.biBitCount = 1) then
       B.Monochrome := True;
     B.Width := Data^.cxDest;
     B.Height := Data^.cyDest;
-    StretchDIBits(B.Canvas.Handle, 0, 0, B.Width, B.Height, Data^.xSrc, Data^.ySrc, B.Width, B.Height, O, P^,
-      Data^.iUsageSrc, Data^.dwRop);
-    FCanvas.ShowImage(AddBitmap(B), GX(Data^.rclBounds.Left, False), GY(Data^.rclBounds.Top, False),
-      GX(Data^.rclBounds.Right - Data^.rclBounds.Left + 1, False),
-      GY(Data^.rclBounds.Bottom - Data^.rclBounds.Top + 1, False), 0);
+    if StretchDIBits(B.Canvas.Handle, 0, 0, B.Width, B.Height, Data^.xSrc, Data^.ySrc, B.Width, B.Height,
+      O, P^, Data^.iUsageSrc, SRCCOPY{Data^.dwRop}) = Integer(GDI_ERROR) then
+    begin
+      Exit;
+      OutputDebugString( PChar( SysErrorMessage( GetLastError ) ) );
+    end;
+
+    if (Data^.offBmiMask > 0) and (Data^.offBitsMask > 0) and (Data^.cbBitsMask > 0) then
+    begin
+      P := IP(Data, Data^.offBmiMask);
+      O := IP(Data, Data^.offBitsMask);
+      Mask := TBitmap.Create;
+      Mask.Monochrome := P^.bmiHeader.biBitCount = 1;
+      Mask.Width := P.bmiHeader.biWidth;
+      Mask.Height := P.bmiHeader.biHeight;
+      if StretchDIBits(Mask.Canvas.Handle, 0, 0, Mask.Width, Mask.Height,
+        0, 0, Mask.Width, Mask.Height, O, P^, Data^.iUsageMask, SRCCOPY) = Integer(GDI_ERROR) then
+         FreeAndNil( Mask )
+      else
+      begin
+
+        Masked := TBitmap.Create;
+        try
+          Masked.Monochrome := B.Monochrome;
+          Masked.Width := B.Width;
+          Masked.Height := B.Height;
+          SetBkColor(Masked.Canvas.Handle,Data^.crBkColorSrc);
+
+          Masked.Canvas.CopyMode := cmSrcErase;
+          Masked.Canvas.Draw(0,0, B);
+          Masked.Canvas.CopyMode := cmSrcInvert;
+          Masked.Canvas.Draw(Data^.xMask, Data^.yMask, Mask);
+          Masked.Canvas.CopyMode := cmSrcPaint;
+          Masked.Canvas.Draw(0,0, B);
+
+          B.Assign( Masked );
+          B.Transparent := True;
+          B.TransparentColor := clWhite;
+
+        finally
+          FreeAndNil( Masked );
+        end;
+      end;
+    end;
+
+    Kx :=   Abs( XScale * CalX );
+    Ky :=   Abs( YScale * CalY );
+
+    OfsX := XOff;
+    OfsY := YOff;
+
+    X := OfsX + ( MapX( Data^.xDest ) * Kx );
+    Y := OfsY + ( MapY( Data^.yDest ) * Ky );
+    W := MapX( Data^.cxDest ) * Kx; 
+    H := MapY( Data^.cyDest ) * Ky;
+
+    FCanvas.ShowImage(AddBitmap(B),X,Y,W,H,0);
   finally
-    B.Free;
+    FreeAndNil( B );
+    FreeAndNil( Mask );    
   end;
   if it then
     InText := True;
 end;
 
-function TEMWParser.AddBitmap(BM: TBitmap): Integer;
+function TEMWParser.AddBitmap(BM: TBitmap; Mask: TBitmap): Integer;
+var
+  Ct: TImageCompressionType;
 begin
   if BM.PixelFormat = pf1bit then
-    Result := FImages.AddImage(BM, itcCCITT4)
-  else if not FEMFOptions.ColorImagesAsJPEG then
-    Result := FImages.AddImage(BM, itcFlate)
+    Ct := itcCCITT4
   else
-    Result := FImages.AddImage(BM, itcJpeg);
+  if not FEMFOptions.ColorImagesAsJPEG then
+    Ct := itcFlate
+  else
+    Ct := itcJpeg;  
+
+  if Assigned(Mask) and Mask.HandleAllocated then
+    Result := FImages.AddImageWithMask( BM,Ct,FImages.AddImageAsMask( Mask ) )
+  else
+  begin
+    if BM.Transparent then
+      Result := FImages.AddImageWithTransparency(BM, Ct)
+    else
+      Result := FImages.AddImage( BM, Ct );
+  end;
 end;
 {$ENDIF}
 

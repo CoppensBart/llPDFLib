@@ -52,6 +52,9 @@ type
   FarInteger = Cardinal;
 {$endif}
 
+{$IF NOT Declared(TBytes)}
+  TBytes = array of Byte;
+{$endif}
 
 {$ifndef PCardinal}
   PCardinal = ^Cardinal;

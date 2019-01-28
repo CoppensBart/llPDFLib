@@ -21,7 +21,12 @@ uses
  llPDFTypes;
 
 const
-  MLS = MaxInt div{$IFDEF WIN32}16{$ELSE}32{$ENDIF};
+  MLS = MaxInt div{$IFDEF WIN32}16{$ELSE}32{$ENDIF};  
+    
+const 
+  TransparentStretchBltStarted = 'BeginTransparentStretchBlt';
+  TransparentStretchBltEnded = 'EndTransparentStretchBlt';
+  
 type
   TTextCTM = record
     a, b, c, d, x, y: Extended;
@@ -54,7 +59,8 @@ type
   function StringToHex(TextStr:AnsiString;WithPrefix:Boolean = True):AnsiString;
 
   procedure FlipBMP(BMP:TBitmap;FlipX, FlipY:Boolean);
-
+  function TransparentStretchBlt(DstDC: HDC; DstX, DstY, DstW, DstH: Integer;
+    SrcDC: HDC; SrcX, SrcY, SrcW, SrcH: Integer; MaskDC: HDC; MaskX,MaskY: Integer): Boolean;
 
   function IsTrueType(FontName: String; Charset: Byte): Boolean;
   function GetFontByCharset ( Charset: Byte ): AnsiString;
@@ -1602,6 +1608,114 @@ begin
   FOwnsObjects := AOwnsObjects;
 end;
 
+function TransparentStretchBlt(DstDC: HDC; DstX, DstY, DstW, DstH: Integer;
+  SrcDC: HDC; SrcX, SrcY, SrcW, SrcH: Integer; MaskDC: HDC; MaskX,
+  MaskY: Integer): Boolean;
+const
+  ROP_DstCopy = $00AA0029;
+var
+  MemDC: HDC;
+  MemBmp: HBITMAP;
+  Save: THandle;
+  crText, crBack: TColorRef;
+  SavePal: HPALETTE;
 
+  function GDICheck(Value: THandle; out ValueValid: Boolean): THandle;
+  {$IFDEF OUTPUTDEBUGSTRING_LOG} //  {$IfOpt D+}
+    var 
+      ErrorCode: Cardinal;
+      ErrorMessage: string;
+  {$EndIf}
+  begin
+    ValueValid := Value > 0;
+    {$IFDEF OUTPUTDEBUGSTRING_LOG} // {$IfOpt D+}      
+    if not ValueValid then
+    begin 
+      ErrorCode := GetLastError;
+      if (ErrorCode <> 0) then
+        ErrorMessage := SysErrorMessage(ErrorCode)
+      else  
+        ErrorMessage := 'unknown wingdi error';
+
+      if ErrorMessage <> '' then
+        OutputDebugString(PChar(ClassName+': operation cancelled - '+ErrorMessage));  
+    end;
+    {$EndIf}    
+    Result := Value;
+  end;
+  
+  procedure WriteGDIComment(ADC: HDC; const AText: string);
+  var
+    V: TBytes;   
+  begin
+    if (ADC > 0) and (AText <> '') and 
+       ( (GetObjectType(ADC) = OBJ_ENHMETADC) or 
+         (GetObjectType(ADC) = OBJ_METADC) ) then
+    begin
+      V := BytesOf(AText);   
+
+      GdiComment(ADC,Length(V),Pointer(V));         
+    end;
+  end;
+  
+begin
+
+  if (Win32Platform = VER_PLATFORM_WIN32_NT) and (SrcW = DstW) and (SrcH = DstH) then
+  begin
+    MemBmp := GDICheck(CreateCompatibleBitmap(SrcDC, 1, 1),Result);
+    if Result then
+    begin
+      MemBmp := SelectObject(MaskDC, MemBmp);
+      try
+        Result := MaskBlt(DstDC, DstX, DstY, DstW, DstH, SrcDC, SrcX, SrcY, MemBmp, MaskX,
+          MaskY, MakeRop4(ROP_DstCopy, SrcCopy));
+      finally
+        MemBmp := SelectObject(MaskDC, MemBmp);
+        DeleteObject(MemBmp);
+      end;    
+    end; 
+    Exit;
+  end;
+  
+  SavePal := 0;
+  MemDC := GDICheck(CreateCompatibleDC(0),Result);
+  if not Result then
+    Exit;
+    
+  try
+    MemBmp := GDICheck(CreateCompatibleBitmap(SrcDC, SrcW, SrcH),Result);
+    if not Result then
+      Exit;    
+    Save := SelectObject(MemDC, MemBmp);
+    SavePal := SelectPalette(SrcDC, SystemPalette16, False);
+    SelectPalette(SrcDC, SavePal, False);
+    if SavePal <> 0 then
+      SavePal := SelectPalette(MemDC, SavePal, True)
+    else
+      SavePal := SelectPalette(MemDC, SystemPalette16, True);
+      
+    RealizePalette(MemDC);
+
+    StretchBlt(MemDC, 0, 0, SrcW, SrcH, MaskDC, MaskX, MaskY, SrcW, SrcH, SrcCopy);
+    StretchBlt(MemDC, 0, 0, SrcW, SrcH, SrcDC, SrcX, SrcY, SrcW, SrcH, SrcErase);
+    crText := SetTextColor(DstDC, $0);
+    crBack := SetBkColor(DstDC, $FFFFFF);
+//     
+    WriteGDIComment(DstDC,'BeginTransparentStretchBlt');
+    StretchBlt(DstDC, DstX, DstY, DstW, DstH, MaskDC, MaskX, MaskY, SrcW, SrcH, SrcAnd);
+    StretchBlt(DstDC, DstX, DstY, DstW, DstH, MemDC, 0, 0, SrcW, SrcH, SrcInvert);
+    WriteGDIComment(DstDC,'EndTransparentStretchBlt');      
+//    
+    SetTextColor(DstDC, crText);
+    SetBkColor(DstDC, crBack);
+
+    if Save <> 0 then SelectObject(MemDC, Save);
+    DeleteObject(MemBmp);
+  finally
+    if SavePal <> 0 then SelectPalette(MemDC, SavePal, False);
+      DeleteDC(MemDC);
+  end;
+  
+end;
 
 end.

@@ -39,8 +39,7 @@ type
     LastFont:TPDFObject;
   end;
 
-
-    ///  <summary> 
+    ///  <summary>
     /// The base class for the control and manipulation of PDF objects. All descendants of this class which are 
     /// used in the library to be created in TPDFDocument by themselves.
     ///  </summary> 
@@ -78,8 +77,6 @@ type
     procedure Add(PDFObject: TPDFObject);
 {#int}    
   end;
-
-
 
   TPDFEngine = class(TObject)
   private
