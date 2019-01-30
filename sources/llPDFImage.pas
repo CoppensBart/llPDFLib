@@ -332,7 +332,11 @@ begin
         if DIB.dsBm.bmBitsPixel = 1 then
           B.PixelFormat := pf1bit
         else
-          raise Exception.Create ( SCannotCompressNotMonochromeImageViaCCITT );
+        begin
+          Result := -1;
+          Exit;
+          // raise Exception.Create ( SCannotCompressNotMonochromeImageViaCCITT );          
+        end;
       end
       else
         raise Exception.Create ( SCannotCompressNotMonochromeImageViaCCITT );

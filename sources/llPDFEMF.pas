@@ -727,7 +727,7 @@ end;
 
 procedure TEMWParser.DoChord(Data: PEMRChord);
 var
-  DP: TDoublePoint;
+  DP: TExtPoint;
 begin
   if CCW then
     DP := FCanvas.Arc(GX(Data^.rclBox.Left), GY(Data^.rclBox.Top), GX(Data^.rclBox.Right), GY(Data^.rclBox.Bottom),
@@ -4153,8 +4153,12 @@ procedure TEMWParser.DoGdiComment(Data: PEMRGDIComment);
 var
   D: TBytes;
   L: Integer;
-  CommandText: string;
+  CommandText, V: string;
+  Prsr: TStrings;
   V1,V2: Boolean;
+  Bbox, Gpts: TExtQuad;
+  Page: TPDFPage;  
+  h,w: Extended;
 begin
   L := Data^.cbData;
   if L < 1 then Exit; 
@@ -4183,7 +4187,65 @@ begin
         FMaskIndex := -1;
       end;        
       Exit;
-    end;    
+    end    
+    else
+    if CommandText.StartsWith(AppendGeoViewPort) then
+//    if StrLComp(PChar(AppendGeoViewPort),PChar(CommandText),Length(AppendGeoViewPort)) <> 0 then
+    begin
+      if (FCanvas is TPDFForm) then
+        Page := TPDFForm(FCanvas).Page
+      else
+      if (FCanvas is TPDFPage) then
+        Page := TPDFPage(FCanvas)
+      else
+        Page := nil;
+             
+      if Assigned(Page) then
+      begin
+        L := Length(AppendGeoViewPort+':');
+        Delete(CommandText,1,L);
+        Prsr := TStringList.Create;
+        try
+          Prsr.NameValueSeparator := '=';          
+          
+          if SplitTxt(CommandText,'|',Prsr,True) < 3 then
+            Exit;
+
+          Bbox := ZeroEQuad;  
+          Gpts := ZeroEQuad;          
+          V := Prsr.ValueFromIndex[Prsr.IndexOfName('BBOX')];
+          
+          if EQuadFromStr(V,Bbox) then
+          begin
+            V := Prsr.ValueFromIndex[Prsr.IndexOfName('GPTS')];          
+            if EQuadFromStr(V,Gpts) then
+            begin
+              V := Prsr.ValueFromIndex[Prsr.IndexOfName('CRS')];
+              if V <> '' then
+              begin
+                for L := 0 to Length(Bbox) -1 do
+                begin                
+//                  Bbox[L].x := XOff + MapX(Bbox[L].x) * Abs( XScale * CalX );
+//                  Bbox[L].y := XOff + MapY(Bbox[L].y) * Abs( YScale * CalY );
+//                RawShowImage ( ImageIndex, ExtToIntX ( X ), ExtToIntY ( y ) - h / d2p, w / d2p, h / d2p, angle ,0, 0 );
+                  Bbox[L].x := GX(Bbox[L].x);
+                  Bbox[L].y := GY(Bbox[L].y);                                    
+                end;
+              
+                Page.AppendViewPort(
+                Bbox,
+                Gpts,
+                V, 
+                Prsr.ValueFromIndex[Prsr.IndexOfName('COMMENT')]);                
+              end;
+            end;
+          end;                                  
+        finally
+          FreeAndNil( Prsr );
+        end;
+      end;      
+      Exit;
+    end;
   end;
   
   // ignore internal gdi subsystem comments header

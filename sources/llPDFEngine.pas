@@ -69,12 +69,15 @@ type
   protected
     FList: TList;
     procedure Clear;override;
-    function GetCount:Integer;override;
-    procedure Save;override;
+    function GetCount:Integer; override;
+    procedure Save; override;
+    function GetItem(idx: Integer): TPDFObject; virtual;
   public
     constructor Create(PDFEngine: TPDFEngine);
     destructor Destroy;override;
     procedure Add(PDFObject: TPDFObject);
+    
+    property Items[idx: Integer]: TPDFObject read GetItem; 
 {#int}    
   end;
 
@@ -239,8 +242,8 @@ function TPDFEngine.GetNextID: Integer;
 var
   Delta: Integer;
 begin
-   if FCurrentID >= FCapacity then
-   begin
+  if FCurrentID >= FCapacity then
+  begin
      if FCapacity > 64 then
        Delta := FCapacity div 4
      else
@@ -659,12 +662,20 @@ end;
 procedure TPDFListManager.Clear;
 var
   i:Integer;
+  o: TPDFObject;
 begin
   inherited;
   if not Assigned(FList) then
     exit;
   for i:= 0 to FList.Count -1 do
-    TPDFObject(FList[i]).Free;
+  begin
+    o := FList[i];
+    if Assigned(o) then
+    begin
+      o.Free;
+      FList[i] := nil;
+    end;
+  end;
   FList.Clear;
 end;
 
@@ -684,6 +695,14 @@ end;
 function TPDFListManager.GetCount: Integer;
 begin
   Result := FList.Count;
+end;
+
+function TPDFListManager.GetItem(idx: Integer): TPDFObject;
+begin
+  if (idx > -1) and (idx < FList.Count) then 
+    Result := TPDFObject(FList.Items[idx])
+  else
+    Result := nil;
 end;
 
 procedure TPDFListManager.Save;
