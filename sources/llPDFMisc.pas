@@ -40,42 +40,37 @@ const
   ExtendedResolution = DoubleResolution;
 {$ENDIF !10BYTESEXTENDED}
   DefaultCompareEpsilon  = ExtendedResolution;
-  NaNValue =  0.0 / 0.0;  
-type
-  TTextCTM = record
-    a, b, c, d, x, y: Extended;
-  end;
-
-  PExt = ^Single;
-
-  TSingleArray = array [ 0..$FFFF ] of Single;
-  PSingleArray = ^TSingleArray;
-
-  TExtPoint = record
-    x, y: Extended;
-  end;
-
-  PExtQuad = ^TExtQuad;
-  TExtQuad = array [0..3] of TExtPoint; 
-  TIntQuad = array [0..3] of TPoint;   
-
-
-  function IntToStrWithZero ( ID, Count: Integer ): AnsiString; 
+  
+  function TransfPt(const p: TExtPoint; const Mat: TTextCTM): TExtPoint;
+  function IntToStrWithZero ( ID, Count: Integer ): AnsiString;
   function EPoint(x, y: Extended): TExtPoint;
+  function ERectSize(r: TExtRect): TExtPoint;  
+  function ERectWidth(r: TExtRect): Extended;
+  function ERectHeight(r: TExtRect): Extended;    
   function ExtValueToStr(const v: Extended; prec: Integer; DecSep: Char = '.'; RemoveZeroes: Boolean = True): string;
   function EPointToStr(p: TExtPoint; ACoordSep: Char = ','; ADecSep: Char = '.'; APrec: Integer = 10): string;  
   function ZeroEPoint: TExtPoint;
-  function EPointFromStr(const s: string; var dst: TExtPoint; const CoordSeparator: Char; const DecSeparator: Char =
-      '.'): Boolean;
+  function EPointFromStr(const s: string; var dst: TExtPoint; const PtCoordSep: Char; const DecSeparator: Char = '.'): Boolean;
   function EPointEqual(p1, p2: TExtPoint; eps: Extended = DefaultCompareEpsilon): Boolean;
-  function ZeroEQuad: TExtQuad;   
-  function EQuad(topleft, bottomright: TExtPoint; norm: boolean = true): TExtQuad;
+  function ERectFromStr(const s: string; var dst: TExtRect; const PtDelim: Char = ';'; const PtCoordSep: Char = ','; const DecSeparator: Char = '.'): Boolean;
+  function ZeroEQuad: TExtQuad;
+  function ZeroERect: TExtRect;      
+  function EQuad(topleft, bottomright: TExtPoint; norm: boolean = true): TExtQuad;  
   function EQuadFromStr(const s: string; var v: TExtQuad; PtDelim: Char = ';'; PtCoordSep: Char = ','; DecSep: Char = '.'): Boolean;
   function EQuadToStr(Value: TExtQuad; PtDelim: Char = ';'; PtCoordSep: char = ','; DecSep: Char = '.'): string;
+  function ERect(Left,Top,Right,Bottom: Extended): TExtRect; overload;
+  function ERect(p1, p2: TExtPoint): TExtRect; overload;
+  function ERect(q: TExtQuad): TExtRect; overload;
+  function ERectToStr(Value: TExtRect; PtDelim: Char = ';'; PtCoordSep: char = ','; DecSep: Char = '.'): string;
+  function ERectEqual(r1,r2: TExtRect; eps: Extended = DefaultCompareEpsilon): Boolean;
+  function ERectOffset(const r: TExtRect; dx, dy: Extended): TExtRect;
+  function ERectInflate(const r: TExtRect; dx, dy: Extended): TExtRect;
   function EQuadEqual(q1,q2: TExtQuad; eps: Extended = DefaultCompareEpsilon): Boolean;
+  function EquadNorm(const q: TExtQuad; swpxy: boolean = False): TExtQuad;  
   function IQuad(topleft, bottomright: TPoint; norm: boolean = true): TIntQuad; overload;
   function IQuad(r: TRect; norm: boolean = true): TIntQuad; overload;
-  function FormatFloat ( Value: Extended; Quality:Boolean = false ): AnsiString;
+  function FormatFloat(Value: Extended; Precision: integer): AnsiString; overload;
+  function FormatFloat ( Value: Extended; Quality: Boolean = false ): AnsiString overload;
   procedure RotateCoordinate ( X, Y, Angle: Extended; var XO, YO: Extended );
   procedure NormalizeRect ( var Rect: TRect ); overload;
   procedure NormalizeRect ( var x1, y1, x2, y2: integer ); overload;
@@ -195,8 +190,8 @@ type
 
   procedure StrAddTruncAt(Source:AnsiString; var Destination: AnsiString; APos: Integer; IncVal: Byte = 0);
 
-  function WriteGeoInfo(dc: HDC; lx0,ly0,lx1,ly1,gx0,gy0,gx1,gy1: double; 
-    const crs: string; const comment: string = ''): Boolean;
+  function WriteGeoInfo(dc: HDC; x0,y0,x1,y1,lat0,lon0,lat1,lon1: double; 
+    const crs: string; InvY: Boolean; const dispcrs: string = ''; const comment: string = ''): Boolean;
   
 type
 {$ifdef UNICODE}
@@ -1114,51 +1109,90 @@ begin
     swp ( y2, y1 );
 end;
 
-
-function FormatFloat ( Value: Extended; Quality:Boolean = false): AnsiString;
+function FormatFloat(Value: Extended; Precision: integer): AnsiString;
 var
-  c: Char;
+  c : Char;
+  f: string;
 begin
+  Precision := Min(Max(Precision,1),18);
+
+  f := StringOfChar('#',Precision); 
 {$ifndef XE}
   c := DecimalSeparator;
-  DecimalSeparator := '.';
+  DecimalSeparator := '.';  
 {$ifndef UNICODE}
-  if Quality then
-    Result := SysUtils.FormatFloat ( '0.#####', Value )
-  else
-    Result := SysUtils.FormatFloat ( '0.##', Value );
+    Result := SysUtils.FormatFloat ( '0.'+f, Value );
 {$else}
-  if Quality then
-    Result := AnsiString(SysUtils.FormatFloat ( '0.#####', Value ))
-  else
-    Result := AnsiString(SysUtils.FormatFloat ( '0.##', Value ));
+    Result := AnsiString(SysUtils.FormatFloat ( '0.'+f, Value ))
 {$endif}
   DecimalSeparator := c;
 {$else}
   c := FormatSettings.DecimalSeparator;
   FormatSettings.DecimalSeparator := '.';
 {$ifndef UNICODE}
-  if Quality then
-    Result := System.SysUtils.FormatFloat ( '0.#####', Value )
-  else
-    Result := System.SysUtils.FormatFloat ( '0.##', Value );
+  Result := System.SysUtils.FormatFloat ( '0.'+f, Value );
 {$else}
-  if Quality then
-{$ifdef W3264}
-    Result := AnsiString(System.SysUtils.FormatFloat ( '0.#####', Value ))
-  else
-    Result := AnsiString(System.SysUtils.FormatFloat ( '0.##', Value ));
-{$else}
-    Result := AnsiString(SysUtils.FormatFloat ( '0.#####', Value ))
-  else
-    Result := AnsiString(SysUtils.FormatFloat ( '0.##', Value ));
-{$endif}
+  {$ifdef W3264}
+    Result := AnsiString(System.SysUtils.FormatFloat ( '0.'+f, Value ));
+  {$else}
+    Result := AnsiString(System.SysUtils.FormatFloat ( '0.'+f, Value ));
+  {$endif}
 {$endif}
   FormatSettings.DecimalSeparator := c;
-
 {$endif}
-
 end;
+
+function FormatFloat ( Value: Extended; Quality:Boolean): AnsiString;
+begin
+  if Quality then
+    Result := FormatFloat(Value, 5)
+  else
+    Result := FormatFloat(Value, 2);    
+end;
+
+//function FormatFloat ( Value: Extended; Quality:Boolean = false): AnsiString;
+//var
+//  c: Char;
+//begin
+//{$ifndef XE}
+//  c := DecimalSeparator;
+//  DecimalSeparator := '.';
+//{$ifndef UNICODE}
+//  if Quality then
+//    Result := SysUtils.FormatFloat ( '0.#####', Value )
+//  else
+//    Result := SysUtils.FormatFloat ( '0.##', Value );
+//{$else}
+//  if Quality then
+//    Result := AnsiString(SysUtils.FormatFloat ( '0.#####', Value ))
+//  else
+//    Result := AnsiString(SysUtils.FormatFloat ( '0.##', Value ));
+//{$endif}
+//  DecimalSeparator := c;
+//{$else}
+//  c := FormatSettings.DecimalSeparator;
+//  FormatSettings.DecimalSeparator := '.';
+//{$ifndef UNICODE}
+//  if Quality then
+//    Result := System.SysUtils.FormatFloat ( '0.#####', Value )
+//  else
+//    Result := System.SysUtils.FormatFloat ( '0.##', Value );
+//{$else}
+//  if Quality then
+//{$ifdef W3264}
+//    Result := AnsiString(System.SysUtils.FormatFloat ( '0.#####', Value ))
+//  else
+//    Result := AnsiString(System.SysUtils.FormatFloat ( '0.##', Value ));
+//{$else}
+//    Result := AnsiString(SysUtils.FormatFloat ( '0.#####', Value ))
+//  else
+//    Result := AnsiString(SysUtils.FormatFloat ( '0.##', Value ));
+//{$endif}
+//{$endif}
+//  FormatSettings.DecimalSeparator := c;
+//
+//{$endif}
+//end;
 
 procedure RotateCoordinate ( X, Y, Angle: Extended; var XO, YO: Extended );
 var
@@ -1373,8 +1407,8 @@ begin
   end;
 end;
 
-function EPointFromStr(const s: string; var dst: TExtPoint; 
-  const CoordSeparator: Char; const DecSeparator: Char): Boolean;
+function EPointFromStr(const s: string; var dst: TExtPoint; const PtCoordSep: Char; const DecSeparator: Char = '.'):
+    Boolean;
 var
   svdsep: Char;
   idx,len: Integer;
@@ -1388,7 +1422,7 @@ begin
   try    
     value:= Trim(S);
     len:= Length(value);
-    idx:= Pos(CoordSeparator,value);
+    idx:= Pos(PtCoordSep,value);
 
     if (len = 0) or (idx = 0) then
       Exit;
@@ -1419,6 +1453,12 @@ begin
   Result[3] := ZeroEPoint;            
 end;
 
+function ZeroERect: TExtRect;
+begin
+  Result.TopLeft := ZeroEPoint;
+  Result.BottomRight := ZeroEPoint;
+end;
+
 function EQuadFromStr(const s: string; var v: TExtQuad; 
   PtDelim: Char; PtCoordSep: Char; DecSep: Char): Boolean;
 var 
@@ -1443,6 +1483,25 @@ begin
   end;
 end;
 
+function ERectFromStr(const s: string; var dst: TExtRect; const PtDelim: Char; const PtCoordSep: Char; const DecSeparator: Char): Boolean;
+var 
+  pars: TStrings;
+begin
+  Result := s <> '';
+  if not Result then Exit;
+
+  pars := TStringList.Create;
+  try
+    if SplitTxt( s,PtDelim, pars, true ) <> 2 then
+      Exit;
+
+    Result := EPointFromStr( pars[0],dst.TopLeft,PtCoordSep,DecSeparator ) and
+              EPointFromStr( pars[1],dst.BottomRight,PtCoordSep,DecSeparator );        
+  finally
+    FreeAndNil( pars );
+  end;
+end;
+
 function EQuadToStr(Value: TExtQuad; PtDelim: Char; PtCoordSep: Char; DecSep: Char): string;
 var
   i : Integer;
@@ -1452,7 +1511,56 @@ begin
   for i := 1 to Length(Value) -1 do
     Result := Result + PtDelim + EPointToStr( Value[ i ],PtCoordSep,DecSep );
 end;
-    
+
+function ERect(Left,Top,Right,Bottom: Extended): TExtRect;
+begin
+  Result.TopLeft := EPoint(Left,Top);
+  Result.BottomRight := EPoint(Right,Bottom);
+end;
+
+function ERect(p1, p2: TExtPoint): TExtRect;
+begin
+  Result.TopLeft := p1;
+  Result.BottomRight := p2;
+end;
+
+function ERect(q: TExtQuad): TExtRect;
+begin
+  Result.Left := Min(Min(q[0].x, q[1].x), Min(q[2].x, q[3].x));
+  Result.Top := Min(Min(q[0].y, q[1].y), Min(q[2].y, q[3].y));
+  Result.Right := Max(Max(q[0].x, q[1].x), Max(q[2].x, q[3].x));
+  Result.Bottom := Max(Max(q[0].y, q[1].y), Max(q[2].y, q[3].y));  
+end;
+
+function ERectToStr(Value: TExtRect; PtDelim: Char; PtCoordSep: char; DecSep: char): string;
+begin      
+  Result := EPointToStr( Value.TopLeft,PtCoordSep,DecSep );
+  
+  Result := Result + PtDelim + EPointToStr( Value.BottomRight,PtCoordSep,DecSep ); 
+end;
+
+function ERectEqual(r1,r2: TExtRect; eps: Extended): Boolean;
+begin
+  Result := EPointEqual( r1.TopLeft, r2.TopLeft, eps ) and
+            EPointEqual( r1.BottomRight, r2.BottomRight, eps ); 
+end;
+
+function ERectOffset(const r: TExtRect; dx, dy: Extended): TExtRect;
+begin
+  Result.Left := r.Left + dx;
+  Result.Top := r.Top + dy;
+  Result.Right := r.Right + dx;
+  Result.Bottom := r.Bottom + dy;
+end;
+
+function ERectInflate(const r: TExtRect; dx, dy: Extended): TExtRect;
+begin
+  Result.Left := r.Left + dx;
+  Result.Top := r.Top + dy;
+  Result.Right := r.Right - dx;
+  Result.Bottom := r.Bottom - dy;
+end;
+
 function EQuadEqual(q1,q2: TExtQuad; eps: Extended): Boolean;
 begin
   Result := 
@@ -1460,6 +1568,25 @@ begin
     EPointEqual( q1[1], q2[1], eps ) and    
     EPointEqual( q1[2], q2[2], eps ) and    
     EPointEqual( q1[3], q2[3], eps );
+end;
+
+function EquadNorm(const q: TExtQuad; swpxy: boolean): TExtQuad;
+begin
+  Result[0].x := Min(Min(q[0].x, q[1].x), Min(q[2].x, q[3].x));
+  Result[0].y := Min(Min(q[0].y, q[1].y), Min(q[2].y, q[3].y));
+  Result[2].x := Max(Max(q[0].x, q[1].x), Max(q[2].x, q[3].x));
+  Result[2].y := Max(Max(q[0].y, q[1].y), Max(q[2].y, q[3].y));               
+
+  if swpxy then
+  begin
+    swp( Result[0].x, Result[0].y );
+    swp( Result[2].x, Result[2].y );    
+  end; 
+  
+  Result[1].x := Result[2].x;
+  Result[1].y := Result[0].y;
+  Result[3].x := Result[0].x;
+  Result[3].y := Result[2].y;
 end;
 
 function IQuad(topleft, bottomright: TPoint; norm: boolean): TIntQuad;
@@ -1500,29 +1627,25 @@ end;
 function ExtValueToStr(const v: Extended; prec: Integer; 
   DecSep: Char; RemoveZeroes: Boolean): string;
 var
-  len: Integer;
+  l,n: Integer;
   svdsep: Char;
 begin
-
-  svdsep:={$if CompilerVersion >= 24}FormatSettings.{$ifend}DecimalSeparator;
-  {$if CompilerVersion >= 24}FormatSettings.{$ifend}DecimalSeparator := DecSep;  
-  try
+  svdsep :={$if CompilerVersion >= 24}FormatSettings.{$ifend}DecimalSeparator;  
+  {$if CompilerVersion >= 24}FormatSettings.{$ifend}DecimalSeparator := DecSep;    
+  try    
     FmtStr(Result, '%.' + IntToStr(prec) + 'f', [v]);
     if RemoveZeroes then
     begin
-      if Pos(DecSep, Result) > 0 then
+      l := Length(Result);          
+      n := Pos(DecSep, Result) -1;
+      while (l > n) do
       begin
-        while True do
-        begin
-          len := Length(Result);          
-          if len = 0 then
-            break;
-            
-          if CharInSet(Result[len], ['0', DecSep]) then
-            Delete(Result, len, 1)
-          else
-            break;
-        end;
+        if CharInSet(Result[l], ['0', DecSep]) then
+          Delete(Result, l, 1)
+        else
+          Exit;
+          
+        l := Length(Result);                    
       end;
     end;
   finally
@@ -1548,6 +1671,29 @@ begin
   Result := (abs(p2.x - p1.x) <= eps) and 
             (abs(p2.y - p1.y) <= eps);
 end;
+
+function ERectSize(r: TExtRect): TExtPoint;
+begin
+  Result.x := r.Right - r.Left;
+  Result.y := r.Bottom - r.Top;  
+end;
+
+function ERectWidth(r: TExtRect): Extended;
+begin
+  Result := r.Right - r.Left;
+end;
+
+function ERectHeight(r: TExtRect): Extended;  
+begin
+  Result := r.Bottom - r.Top;
+end;
+
+function TransfPt(const p: TExtPoint; const Mat: TTextCTM): TExtPoint;
+begin
+  Result.x := (Mat.a * p.x) + (Mat.c * p.y) + Mat.x;
+  Result.y := (Mat.b * p.x) + (Mat.d * p.y) + Mat.y; 
+end;
+
 
 function IntToStrWithZero ( ID, Count: Integer ): AnsiString;
 var
@@ -2042,10 +2188,11 @@ begin
   
 end;
 
-function WriteGeoInfo(dc: HDC; lx0,ly0,lx1,ly1,gx0,gy0,gx1,gy1: Double; 
-  const crs: string; const comment: string): Boolean;
+function WriteGeoInfo(dc: HDC; x0,y0,x1,y1,lat0,lon0,lat1,lon1: Double; 
+  const crs: string; InvY: Boolean; const dispcrs: string; const comment: string): Boolean;
 var 
-  bbox,gpts: TExtQuad;
+  bbox: TExtRect;
+  gpts: TExtQuad;
   command: string;
   Data: TBytes;
 begin
@@ -2055,16 +2202,23 @@ begin
   if ( (GetObjectType(DC) = OBJ_ENHMETADC) or 
        (GetObjectType(DC) = OBJ_METADC) ) then
   begin     
-    bbox := EQuad( EPoint(lx0,ly0), EPoint(lx1,ly1));
-    gpts := EQuad( EPoint(gx0,gy0), EPoint(gx1,gy1));
+    bbox := ERect( EPoint(x0,y0), EPoint(x1,y1));
+    gpts := EQuad( EPoint(lat0,lon0), EPoint(lat1,lon1));
 
     command := AppendGeoViewPort +
-      ':BBOX='+EQuadToStr(bbox,';',',','.')+
+      ':BBOX='+ERectToStr(bbox,';',',','.')+
       '|GPTS='+EQuadToStr(gpts,';',',','.')+
-      '|CRS='+crs;      
+      '|CRS='+crs;
+
+    if InvY then
+      command := command + '|INVY=TRUE';
+    
+    if dispcrs <> '' then      
+      command := command + '|DISPCRS='+dispcrs;
+      
     if comment <> '' then
       command := command + '|COMMENT='+comment;
-
+      
     Data := BytesOf( command );
 
     GdiComment(dc,Length(Data),Pointer(Data));

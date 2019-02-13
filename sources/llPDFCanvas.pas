@@ -192,20 +192,28 @@ type
     property Item[const AName: AnsiString]: TOptionalContent read GetByName;
   end;
 
-  /// <summary>
-  ///   This is the base class for implementation display of real-world units
-  ///   corresponding to objects on a page.
-  /// </summary>
-  TPDFGeoMeasure = class(TPDFObject)
-   private
+  TPDFMeasure = class( TPDFObject )
+  private
+    FCanvas: TPdfCanvas;
+  protected
+    procedure IntSave; virtual; abstract;    
+    procedure IntInit; virtual; abstract;
+  public  
+    constructor Create(Engine: TPDFEngine; Cnvs: TPdfCanvas);
+    function CheckValid: Boolean; virtual;
+    procedure Save; override;    
+    property Canvas: TPdfCanvas read FCanvas;
+  end;
+
+  TPDFGeoMeasure = class ( TPDFMeasure )
+  private
     FGpts,
     FLpts,     
-    FBbox, 
-    FBnds: TExtQuad;
-    FDesctiption: string;
+    FBnds: TExtQuad; 
+    FArea: TExtRect;
     FCRS: string;
-    FProjectedCrs: Boolean;
-    FViewportID: Integer;
+    FDisplayCRS: string;
+    FOwnBBox: Boolean;
     function GetGptsText: AnsiString;    
     function GetBndsText: AnsiString;    
     function GetLptsText: AnsiString;
@@ -214,96 +222,122 @@ type
     procedure SetGpts(const Value: TExtQuad);
     procedure SetLpts(const Value: TExtQuad);
     procedure SetBnds(const Value: TExtQuad);
-    procedure SetBBox(const Value: TExtQuad);
-        
-    function GetViewPortID(): Integer;
-   protected
-    FOwner: TPDFCanvas;
-    procedure Save; override;
-    
-    property ViewPortID: Integer read GetViewPortID;        
-   public
-    constructor Create(Engine: TPDFEngine);
-    function Validate: Boolean;
-    
-    function GetBboxText: AnsiString;
-    
+    function CheckProjected( const Wkt: string ): Boolean;
+  protected
+    procedure IntInit; override;
+    procedure IntSave; override;
+  public
+    function BndsFromText(const v: string): Boolean;
+    function LptsFromText(const v: string): Boolean;
+    function CheckValid: Boolean; override;
     /// <summary>
-    ///   optional description
-    /// </summary>
-    property Desctiption: string read FDesctiption write FDesctiption;
-    /// <summary>
-    ///   An array of numbers taken pairwise that <br />define a series of 
-    ///   points that describes the bounds of an area for which geospatial 
-    ///   transformations are valid. For maps, this bounding polygon isknow as 
-    ///   a <br />neatline. These numbers are expressed <b>relative</b> to a 
+    ///   An array of numbers taken pairwise that define a series of points 
+    ///   that describes the bounds of an area for which geospatial 
+    ///   transformations are valid. For maps, this bounding polygon isknown as 
+    ///   a neatline. <br />These numbers are expressed <b>relative</b> to a 
     ///   unit square that describes the BBox associated with a Viewport or 
     ///   form XObject, or the bounds of an image XObject.
     /// </summary>
     /// <remarks>
-    ///   If not present, the default values define a rectangle describingthe 
-    ///   full unit square, with values of <i>0.0 0.0 0.0 1.0 1.0 1.0 1.00.0.</i>
+    ///   <para>
+    ///     The polygon description need not be explicitly closed by 
+    ///     repeating the first point values as a final point.
+    ///   </para>
+    ///   <para>
+    ///     If not present, the default values define a rectangle 
+    ///     describingthe full unit square, with values of <i>0 0 0 1 1 1 1 0</i>
+    ///   </para>
     /// </remarks>
     property Bnds: TExtQuad read FBnds write SetBnds;
     /// <summary>
-    ///   viewport rectangle in page units
-    /// </summary>    
-    property BBox: TExtQuad read FBbox write SetBBox;
-    /// <summary>
-    ///   viewport rectangle in projection units
+    ///   An array of numbers taken pairwise, defining points in geographic 
+    ///   space as degrees of <b>latitude</b> and <b>longitude</b>. These 
+    ///   values are based <u>on the geographic coordinate system</u> described 
+    ///   in the GCS dictionary.
     /// </summary>
+    /// <remarks>
+    ///   Note that any projected coordinate system includes an underlying 
+    ///   geographic coordinate system.
+    /// </remarks>
     property Gpts: TExtQuad read FGpts write SetGpts;
     /// <summary>
-    ///   Optional array of numbers taken pairwise that <br />define points in 
-    ///   a 2D unit square. The unit square is mapped to the <br />rectangular 
-    ///   bounds of the viewport, image XObject, or forms <br />XObject that 
-    ///   contain the measure dictionary. This array contains <br />the same 
-    ///   number of number pairs as the <br />array; each number <br />GPTS <br />
-    ///   pair is the unit square object position corresponding to the <br />
-    ///   geospatial position in the <br />array. <br />GPTS
+    ///   Optional array of numbers taken pairwise that define points in a 2D 
+    ///   unit square. The unit square is mapped to the rectangular bounds of 
+    ///   the viewport, image XObject, or forms XObject that contain the 
+    ///   measure dictionary. <br />This array contains the same number of 
+    ///   number pairs as the array; each number GPTS pair is the unit square 
+    ///   object position corresponding to the geospatial position in the 
+    ///   array.
     /// </summary>
+    /// <remarks>
+    ///   If not present, the default values define a rectangle describingthe 
+    ///   full unit square, with values of <i>0 0 0 1 1 1 1 0</i>
+    /// </remarks>
     property Lpts: TExtQuad read FLpts write SetLpts;
     /// <summary>
-    ///   coordinate system definition in wellknown text format
+    ///   A projected or geographic coordinate system dictionary defined in 
+    ///   wellknown text format.
     /// </summary>
     property CRS: string read FCRS write SetCRS;
+    /// <summary>
+    ///   A projected or geographic coordinate system to be used for the 
+    ///   display of position values, such as latitude and longitude.
+    /// </summary>
+    /// <remarks>
+    ///   Formatting the displayed representation of these values is controlled 
+    ///   by the conforming reader.
+    /// </remarks>
+    property DisplayCRS: string read FDisplayCRS write FDisplayCRS;
     
-    property Owner: TPDFCanvas read FOwner;
+//    property OwnBBox: Boolean read FOwnBBox write FOwnBBox;
+  end;
+  
+  TPDFViewPort = class( TPDFObject )
+  private
+    FOwner: TPDFPage;  
+    FArea: TExtRect;
+    FDescription: string;
+    function GetBboxText: AnsiString;
+    
+  protected
+    FMeasure: TPDFGeoMeasure;    
+  public
+    function Validate: Boolean;
+    procedure Save; override;
+    constructor Create(Engine: TPDFEngine; Owner: TPDFPage);
+    destructor Destroy();override;     
+    /// <summary>
+    ///   viewport area on page in document default units
+    /// </summary>
+    property Area: TExtRect read FArea write FArea;
+    /// <summary>
+    ///   optional description
+    /// </summary>
+    property Description: string read FDescription write FDescription;    
+    /// <summary>
+    ///   measure object for this viewport
+    /// </summary>
+    property Measure: TPDFGeoMeasure read FMeasure;
+    /// <summary>
+    ///   page where located this object
+    /// </summary>
+    property Owner: TPDFPage read FOwner write FOwner;
+    function AsText(Append: Boolean): AnsiString;
   end;
 
-  TPDFGeoMeasures = class( TPDFListManager )
+  TPDFMeasures = class( TPDFListManager ) 
+  
+  end;
+  
+  TPDFViewPorts = class( TPDFListManager )
   private
-    FOwner: TPdfCanvas;
-    FPrepared: Boolean;
-    function GetItemByIndex(idx: Integer): TPDFGeoMeasure; overload;
-    function Find(bbox, gpts: TExtQuad; const crs: string; out item: TPDFGeoMeasure): Boolean;
-  public  
-    constructor Create(AEngine: TPDFEngine; AOwner: TPDFCanvas); reintroduce;
-    /// <param name="bbox">
-    ///   viewport rectangle in page ( Owner ) units <br />
-    /// </param>
-    /// <param name="gpts">
-    ///   viewport rectangle in projection units
-    /// </param>
-    /// <param name="crs">
-    ///   coordinate system definition in wellknown text format
-    /// </param>
-    /// <param name="description">
-    ///   optional description
-    /// </param>
-    /// <param name="bnds">
-    ///   An array of numbers taken pairwise that <br />define a series of 
-    ///   points that describes the bounds of an area for whichgeospatial 
-    ///   transformations are valid. These numbers are expressed relative to a 
-    ///   unit square that describes the BBox associated with a Viewport or 
-    ///   formXObject, or the bounds of an image Xobject.
-    /// </param>
-    procedure Add( const bbox, gpts: TExtQuad; const crs: string;
-      const description: string = ''; bnds: PExtQuad = nil ); overload;
-    function PrepareSave(): Boolean;
-    procedure Save; override;
-    
-    property Items[idx: Integer]: TPDFGeoMeasure read GetItemByIndex;
+    FOwner: TPDFPage;
+    function GetItemByIndex(idx: Integer): TPDFViewPort; overload;
+    function Find(const area: textrect; const Gpts: TExtQuad; const Crs: string; out item: TPDFViewPort): Boolean;
+  public
+    constructor Create(AEngine: TPDFEngine; Owner: TPDFPage);
+    function Add(const Area: TExtRect; Gpts: TExtQuad; const Crs: string): TPDFViewPort; overload;
+    property Items[idx: Integer]: TPDFViewPort read GetItemByIndex;
   end;
   
   /// <summary>
@@ -1232,7 +1266,10 @@ type
   private
     FPatterns: array of TPDFPattern;    
     FHaveOptional:Boolean;
+    FMeasure: TPDFMeasure;
     FOptionalContent: TOptionalContent;
+    function GetMatrix: TTextCTM;
+    procedure SetMeasure(const Value: TPDFMeasure);
   protected
     FPage: TPdfPage;
     procedure Save;override;    
@@ -1246,8 +1283,11 @@ type
     ///   Object specifying thepattern
     /// </param>
     procedure SetPattern(Pattern: TPDFPattern);
-    
-    property Page: TPdfPage read FPage;
+    property Page: TPdfPage read FPage;    
+    procedure TransfPt(var p: TExtPoint);
+    procedure ScalePt(var p: TExtPoint);
+    property Measure: TPDFMeasure read FMeasure write SetMeasure;
+    property Matrix: TTextCTM read GetMatrix;
   end;
 
 
@@ -1270,7 +1310,7 @@ type
     FMeta: array of TPDFForm;
     FPatterns: array of TPDFPattern;
     FOP: array of TOptionalContent;
-    FVP: TPDFGeoMeasures;    
+    FViewPorts: TPDFViewPorts;
     FAskCanvas: Boolean;
     FCanvas: TCanvas;
     FOrientation: TPDFPageOrientation;
@@ -1289,7 +1329,7 @@ type
   public
     constructor Create(Engine:TPDFEngine;Owner: TPDFPages; FontManager: TPDFFonts);
     destructor Destroy; override;    
-    procedure AppendViewPort(Bbox,Gpts: TExtQuad; const Crs: string; const descr: string);
+    function AddGeoViewPort(PageArea: TExtRect; const Gpts: TExtQuad; const Crs: string): TPDFViewPort;
     /// <summary>
     ///   Creates annotation, clicking which leads to the specified page
     /// </summary>
@@ -4029,8 +4069,8 @@ begin
     
   for i:= 0 to Length(FAnnotations) -1 do
     FAnnotations[i].Free;
-    
-  FreeAndNil(FVP);
+
+  FreeAndNil( FViewPorts );
   
   inherited;
 end;
@@ -4047,7 +4087,6 @@ var
   MS: TMemoryStream;
   CS: TCompressionStream;
   S: AnsiString;
-  VpWrite: Boolean;
 begin
   if FBCDStart then
      TurnOffOptionalContent;
@@ -4060,6 +4099,12 @@ begin
 
   FSaveCount := 2;
   GStateRestore;
+
+  if Assigned( FViewPorts ) and ( FViewPorts.Count > 0 )then
+  begin
+    for I := 0 to FViewPorts.Count -1 do
+      FViewPorts.Items[I].Measure.Save;
+  end;
 
   for I := 0 to Length( FMeta) - 1 do
     FMeta[I].Save;
@@ -4191,24 +4236,15 @@ begin
   Eng.SaveToStream ( '/Parent ' + GetRef ( FOwner.ID )  );
   Eng.SaveToStream ( '/MediaBox [0 0 ' + IStr ( FWidth ) + ' ' + IStr ( FHeight ) + ']' );
 
-  VpWrite := Assigned(FVP) and FVP.PrepareSave;
-  if VpWrite then
+  if Assigned( FViewPorts ) and (FViewPorts.Count > 0 )then
   begin
-    // save vp array
-    Eng.SaveToStream('/VP [ ',false);
-    for i := 0 to FVP.Count - 1 do
+    Eng.SaveToStream('/VP[', False);
+     
+    for I := 0 to FViewPorts.Count -1 do
     begin
-      if FVP.Items[i].ViewPortID > -1 then
-      begin
-        S := GetRef( FVP.Items[i].ViewPortID );
-        if i > 0 then
-          S := S + ' ';
-          
-        Eng.SaveToStream( S );      
-      end;
-        
-    end;     
-    Eng.SaveToStream(' ]');
+      Eng.SaveToStream( FViewPorts.Items[I].AsText(I > 0), False );        
+    end;
+    Eng.SaveToStream(']');  
   end;
     
   if FThumbnail >= 0 then
@@ -4234,9 +4270,6 @@ begin
   end;
 
   Eng.CloseObj;
-  
-  if VpWrite then
-    FVP.Save;  
 end;
 
 procedure TPDFPage.SetOrientation(const Value: TPDFPageOrientation);
@@ -4328,7 +4361,8 @@ begin
           NMF.Height := MF.Height;
           NMF.Width := MF.Width;
         end;
-      end else
+      end
+      else
       begin
         NMF.Height := MF.Height;
         NMF.Width := MF.Width;
@@ -4352,10 +4386,17 @@ begin
         S := Pars.GetMax;
         if ( S.cx <> 0 ) and ( S.cy <> 0 ) then
           Append := True;
+          
         if Append then
         begin
           P.Width := abs ( S.cx );
           P.Height := abs ( S.cy );
+          
+          P.FMatrix.x := x / D2P;
+          P.FMatrix.y := ( Height - P.Height * YScale / AX - y ) / D2P;
+          P.FMatrix.a := XScale / AX;
+          P.FMatrix.d := YScale / AX;          
+          
           Pars.Execute;
         end;
       finally
@@ -4364,7 +4405,8 @@ begin
     finally
       NMF.Free;
     end;
-  end else
+  end
+  else
   begin
     Pars := TEMWParser.Create ( Eng, FFonts, P, TPDFEMFParseOptions(FOwner.EMFOptions), FOwner.Images,
       FOwner.Patterns, Eng.Resolution, P.FContent );
@@ -4374,16 +4416,24 @@ begin
       S := Pars.GetMax;
       if ( S.cx <> 0 ) and ( S.cy <> 0 ) then
         Append := True;
+        
       if Append then
       begin
         P.Width := abs ( S.cx );
         P.Height := abs ( S.cy );
+        
+        P.FMatrix.x := x / D2P;
+        P.FMatrix.y := ( Height - P.Height * YScale / AX - y ) / D2P;
+        P.FMatrix.a := XScale / AX;
+        P.FMatrix.d := YScale / AX;        
+        
         Pars.Execute;
       end;
     finally
       Pars.Free;
     end;
   end;
+  
   if Append then
   begin
     EndText;
@@ -4391,10 +4441,7 @@ begin
     SetLength(FMeta, I +1);
     FMeta[I] := P;
     AppendAction ( 'q /IF' + IStr ( i ) + ' Do Q' );
-    P.FMatrix.x := x / D2P;
-    P.FMatrix.y := ( Height - P.Height * YScale / AX - y ) / D2P;
-    P.FMatrix.a := XScale / AX;
-    P.FMatrix.d := YScale / AX;
+
   end;
 end;
 
@@ -4473,13 +4520,12 @@ begin
   FBCDStart := True;
 end;
 
-
-procedure TPDFPage.AppendViewPort(Bbox, Gpts: TExtQuad; const Crs: string; const descr: string );
+function TPDFPage.AddGeoViewPort(PageArea: TExtRect; const Gpts: TExtQuad; const Crs: string): TPDFViewPort;
 begin
-  if FVP = nil then
-    FVP := TPDFGeoMeasures.Create(Eng,Self);
+  if FViewPorts = nil then
+    FViewPorts := TPDFViewPorts.Create( Eng, Self );
 
-  FVP.Add( Bbox, Gpts, Crs, descr );    
+  Result := FViewPorts.Add( PageArea, Gpts, Crs);
 end;
 
 procedure TPDFPage.CloseCanvas(AskedCanvas: Boolean);
@@ -4790,6 +4836,11 @@ begin
     FHaveOptional := False;
 end;
 
+function TPDFForm.GetMatrix: TTextCTM;
+begin
+  Result := FMatrix;
+end;
+
 procedure TPDFForm.Save;
 var
   I:Integer;
@@ -4800,6 +4851,7 @@ begin
     EndText;
   for I := FSaveCount + 1 downto 0 do
     GStateRestore;
+
   Eng.StartObj ( ID );
   Eng.SaveToStream ( '/Type /XObject' );
   Eng.SaveToStream ( '/Subtype /Form' );
@@ -4810,6 +4862,10 @@ begin
   Eng.SaveToStream ( '/Matrix [' + FormatFloat ( FMatrix.a ) + ' ' + FormatFloat ( FMatrix.b ) + ' ' + FormatFloat ( FMatrix.c ) + ' ' +
     FormatFloat ( FMatrix.d ) + ' ' + FormatFloat ( FMatrix.x ) + ' ' + FormatFloat ( FMatrix.y ) + ' ]' );
   Eng.SaveToStream ( '/BBox [0 0 ' + IStr ( FWidth ) + ' ' + IStr ( FHeight ) + ']' );
+
+  if Assigned(FMeasure) then
+    Eng.SaveToStream( '/Measure '+ FMeasure.RefID );
+
   Eng.SaveToStream ( '/Resources <<'  );
   if Eng.PDFACompatibile then
     if FRGBUsed or FGrayUsed or FCMYKUsed then
@@ -4893,6 +4949,20 @@ begin
   Eng.CloseStream;
 end;
 
+procedure TPDFForm.ScalePt(var p: TExtPoint);
+begin                        
+  p.x := FMatrix.a * p.x;
+  p.y := FMatrix.d * p.y;    
+end;
+
+procedure TPDFForm.SetMeasure(const Value: TPDFMeasure);
+begin
+  if FMeasure <> Value then
+  begin
+    FMeasure := Value;
+    FMeasure.FCanvas := Self;
+  end;
+end;
 
 procedure TPDFForm.SetPattern(Pattern: TPDFPattern);
 var
@@ -4918,6 +4988,11 @@ begin
   AppendAction ( '/Pattern cs /Ptn'+IStr(idx)+' scn');
 end;
 
+procedure TPDFForm.TransfPt(var p: TExtPoint);
+begin              
+  p.x := (FMatrix.a * p.x) + (FMatrix.c * p.y) + FMatrix.x;
+  p.y := (FMatrix.b * p.x) + (FMatrix.d * p.y) + FMatrix.y;    
+end;
 
 { TPDFGState }
 
@@ -5394,14 +5469,162 @@ begin
       result := stNeedUnicode;
 end;
 
+
+constructor TPDFViewPort.Create(Engine: TPDFEngine; Owner: TPDFPage);
+begin
+  inherited Create(Engine);
+  FOwner := Owner;  
+  FMeasure := TPDFGeoMeasure.Create( Engine, FOwner );  
+end;
+
+destructor TPDFViewPort.Destroy;
+begin
+  FreeAndNil(FMeasure);  
+  inherited;
+end;
+
+function TPDFViewPort.GetBboxText: AnsiString;
+begin
+  Result := AnsiString(ERectToStr( FArea,' ', ' '));
+end;
+
+procedure TPDFViewPort.Save;
+begin
+  if not Validate then
+    Exit;
+    
+  FMeasure.Save;
+  
+  Eng.StartObj( ID );
+  Eng.SaveToStream( '/Type /Viewport', False);
+//  if not ((FMeasure.Canvas is TPDFForm) {and (FMeasure.OwnBBox)}) then  
+  Eng.SaveToStream( '/BBox [ '+ GetBboxText + ' ]', False );    
+  Eng.SaveToStream( '/Measure '+GetRef( FMeasure.ID ), False);
+  if Description <> '' then
+    Eng.SaveToStream ( '/Name (' +AnsiString(Description)+ ')', False);    
+  Eng.CloseObj( ); 
+end;
+
+function TPDFViewPort.AsText(Append: Boolean): AnsiString;
+begin
+  Result := '<< /Type /Viewport';
+  
+//  if not ((FMeasure.Canvas is TPDFForm) {and (FMeasure.OwnBBox)}) then  
+    Result := Result + '/BBox [ '+GetBboxText+ ']';
+
+  Result := Result + '/Measure '+GetRef( FMeasure.ID );    
+  if Description <> '' then
+    Result := Result + '/Name (' +AnsiString(Description)+ ')';
+
+  Result := Result + '>>';
+  
+  if Append then
+    Result := ' '+ Result;
+end;
+
+function TPDFViewPort.Validate: Boolean;
+begin
+  Result := Assigned(FMeasure) and FMeasure.CheckValid() and
+    (FArea.Bottom - FArea.Top > 0) and 
+    (FArea.Right - FArea.Left > 0);
+end;
+
+{ TPDFMeasure }
+
+function TPDFMeasure.CheckValid: Boolean;
+begin
+  Result := Assigned( FCanvas );
+end;
+
+constructor TPDFMeasure.Create(Engine: TPDFEngine; Cnvs: TPdfCanvas);
+begin
+  inherited Create( Engine );  
+  FCanvas := Cnvs; 
+
+  IntInit;
+end;
+
+procedure TPDFMeasure.Save;
+begin
+  if CheckValid then
+    IntSave;
+end;
+
 { TPDFGeoMeasure }
 
-constructor TPDFGeoMeasure.Create( Engine: TPDFEngine );
+function TPDFGeoMeasure.BndsFromText(const v: string): Boolean;
+var
+  Q: TExtQuad;
 begin
-  FDesctiption := '';
+  Result := EQuadFromStr(v,Q,' ',',','.');
+  if Result then
+    SetBnds(Q);
+end;
+
+function TPDFGeoMeasure.CheckProjected(const Wkt: string): Boolean;
+begin
+  Result := Pos('PROJCS',Wkt) > 0;
+end;
+
+function TPDFGeoMeasure.CheckValid: Boolean;
+begin
+  Result := inherited CheckValid;
+end;
+
+function TPDFGeoMeasure.GetBndsText: AnsiString;
+begin
+  Result :=
+    FormatFloat ( Bnds[0].x, True ) + ' ' + 
+    FormatFloat ( Bnds[0].y, True ) + ' ' + 
+    
+    FormatFloat ( Bnds[1].x, True ) + ' ' + 
+    FormatFloat ( Bnds[1].y, True ) + ' ' + 
+    
+    FormatFloat ( Bnds[2].x, True ) + ' ' + 
+    FormatFloat ( Bnds[2].y, True ) + ' ' +
+    
+    FormatFloat ( Bnds[3].x, True ) + ' ' + 
+    FormatFloat ( Bnds[3].y, True );     
+end;
+
+function TPDFGeoMeasure.GetGptsText: AnsiString;
+begin
+  Result := 
+    FormatFloat ( Gpts[0].x, 10 ) + ' ' + 
+    FormatFloat ( Gpts[0].y, 10 ) + ' ' +
+    
+    FormatFloat ( Gpts[1].x, 10 ) + ' ' + 
+    FormatFloat ( Gpts[1].y, 10 ) + ' ' +
+    
+    FormatFloat ( Gpts[2].x, 10 ) + ' ' + 
+    FormatFloat ( Gpts[2].y, 10 ) + ' ' +
+
+    FormatFloat ( Gpts[3].x, 10 ) + ' ' + 
+    FormatFloat ( Gpts[3].y, 10 );
+end;
+
+function TPDFGeoMeasure.GetLptsText: AnsiString;
+begin
+  Result :=
+    FormatFloat ( Lpts[0].x ,True ) + ' ' + 
+    FormatFloat ( Lpts[0].y ,True ) + ' ' + 
+    
+    FormatFloat ( Lpts[1].x ,True ) + ' ' + 
+    FormatFloat ( Lpts[1].y ,True ) + ' ' + 
+    
+    FormatFloat ( Lpts[2].x ,True ) + ' ' + 
+    FormatFloat ( Lpts[2].y ,True ) + ' ' +
+    
+    FormatFloat ( Lpts[3].x ,True ) + ' ' + 
+    FormatFloat ( Lpts[3].y ,True );
+end;
+
+
+procedure TPDFGeoMeasure.IntInit;
+begin
   FCRS := '';  
-  FViewportID := -1;             
-  FBbox := ZeroEQuad;
+  FArea.TopLeft := ZeroEPoint;
+  FArea.BottomRight := ZeroEPoint;  
   FGpts := ZeroEQuad;
 
   FLpts[0].x := 0.0;
@@ -5421,56 +5644,11 @@ begin
   FBnds[2].y := 1.0;
   FBnds[3].x := 1.0;
   FBnds[3].y := 0.0;
-    
-  inherited Create( Engine );
+  
+  FOwnBBox := False;
 end;
 
-function TPDFGeoMeasure.GetBboxText: AnsiString;
-begin
-  Result := 
-    FormatFloat ( Bbox[0].x, True ) + ' ' + FormatFloat ( Bbox[0].y, True ) + ' ' + 
-    FormatFloat ( Bbox[2].x, True ) + ' ' + FormatFloat ( Bbox[2].y, True );
-end;
-
-function TPDFGeoMeasure.GetBndsText: AnsiString;
-begin
-  Result := 
-    FormatFloat ( Bnds[0].x, True ) + ' ' + FormatFloat ( Bnds[0].y, True ) + ' ' + 
-    FormatFloat ( Bnds[1].x, True ) + ' ' + FormatFloat ( Bnds[1].y, True ) + ' ' + 
-    FormatFloat ( Bnds[2].x, True ) + ' ' + FormatFloat ( Bnds[2].y, True ) + ' ' +
-    FormatFloat ( Bnds[3].x, True ) + ' ' + FormatFloat ( Bnds[3].y, True );
-end;
-
-function TPDFGeoMeasure.GetGptsText: AnsiString;
-begin
-  Result := 
-    FormatFloat ( Gpts[0].x, True ) + ' ' + FormatFloat ( Gpts[0].y, True ) + ' ' + 
-    FormatFloat ( Gpts[1].x, True ) + ' ' + FormatFloat ( Gpts[1].y, True ) + ' ' + 
-    FormatFloat ( Gpts[2].x, True ) + ' ' + FormatFloat ( Gpts[2].y, True ) + ' ' +
-    FormatFloat ( Gpts[3].x, True ) + ' ' + FormatFloat ( Gpts[3].y, True );
-end;
-
-function TPDFGeoMeasure.GetLptsText: AnsiString;
-begin
-  Result := 
-    FormatFloat ( Lpts[0].x ) + ' ' + FormatFloat ( Lpts[0].y ) + ' ' + 
-    FormatFloat ( Lpts[1].x ) + ' ' + FormatFloat ( Lpts[1].y ) + ' ' + 
-    FormatFloat ( Lpts[2].x ) + ' ' + FormatFloat ( Lpts[2].y ) + ' ' +
-    FormatFloat ( Lpts[3].x ) + ' ' + FormatFloat ( Lpts[3].y );
-end;
-
-function TPDFGeoMeasure.GetViewPortID: Integer;
-begin
-  if FViewportID = -1 then
-  begin
-    if Validate then
-      FViewportID := Eng.GetNextID;
-  end;
-    
-  Result := FViewportID;
-end;
-
-procedure TPDFGeoMeasure.Save;
+procedure TPDFGeoMeasure.IntSave;
 (*
   217 0 obj
   <<
@@ -5491,49 +5669,58 @@ procedure TPDFGeoMeasure.Save;
   endobj
 *)
 var 
-  I: Integer;
+  Nxt,Nxt2: Integer;
 begin
-  if (ViewPortID < 0) or not Validate() then
-    Exit;     
-    
-  // measure dictionary
-  Eng.StartObj ( ID );
-  Eng.SaveToStream ( '/Type /Measure' );
-  Eng.SaveToStream( '/Bounds [ '+ GetBndsText +' ]' );
-
-  I := Eng.GetNextID;
+  // projection dict
+  Nxt :=  Eng.GetNextID; 
+  Eng.StartObj( Nxt );
   
-  // link to projection
-  Eng.SaveToStream ( '/GCS ' + GetRef( I ) );
-  // geopoints     
-  Eng.SaveToStream( '/GPTS [ ' + GetGptsText + ' ]' );
-
-  if ( Lpts[2].x - Lpts[0].x > 0 ) and 
-     ( Lpts[2].y - Lpts[0].y > 0 ) then
-    Eng.SaveToStream( '/LPTS [ ' + GetLptsText + ' ]' );
-
-  // units info 
-  Eng.SaveToStream( '/PDU [ /M /SQM /DEG ]' );
-  Eng.SaveToStream( '/Subtype /GEO' );
-  Eng.CloseObj();
-  
-  // projection dictionary
-  Eng.StartObj( I );
-  if FProjectedCrs then
+  if CheckProjected( CRS ) then
     Eng.SaveToStream( '/Type /PROJCS' )
   else
     Eng.SaveToStream( '/Type /GEOCS' );
-        
+
   Eng.SaveToStream( '/WKT ('+ AnsiString( CRS ) + ')' );
+  Eng.CloseObj();  
+
+  if DisplayCRS <> '' then
+  begin
+    Nxt2 := Eng.GetNextID; 
+
+    Eng.StartObj( Nxt2 );
+    if CheckProjected( DisplayCRS ) then
+      Eng.SaveToStream( '/Type /PROJCS' )
+    else
+      Eng.SaveToStream( '/Type /GEOCS' );
+    
+    Eng.SaveToStream( '/WKT ('+ AnsiString( DisplayCRS ) + ')' );
+    Eng.CloseObj();    
+  end
+  else
+    Nxt2 := -1;
+  
+  // measure dict
+  Eng.StartObj( ID );
+  Eng.SaveToStream( '/Type /Measure /Subtype /GEO' );
+  Eng.SaveToStream( '/Bounds [ '+ GetBndsText +' ]' );
+  Eng.SaveToStream( '/GCS ' + GetRef( Nxt ) );
+
+  if Nxt2 > 0 then 
+    Eng.SaveToStream( '/DCS ' + GetRef( Nxt2 ) );  
+   
+  Eng.SaveToStream( '/GPTS [ ' + GetGptsText + ' ]');
+  Eng.SaveToStream( '/LPTS [ ' + GetLptsText + ' ]');
+  Eng.SaveToStream( '/PDU [ /M /SQM /DEG ]' ,False);
   Eng.CloseObj();  
 end;
 
-procedure TPDFGeoMeasure.SetBBox(const Value: TExtQuad);
+function TPDFGeoMeasure.LptsFromText(const v: string): Boolean;
+var
+  Q: TExtQuad;
 begin
-  if EQuadEqual(FBbox,Value) then
-    Exit;
-  
-  FBbox := Value;
+  Result := EQuadFromStr(v,Q,' ',',','.');
+  if Result then
+    SetLpts(Q);
 end;
 
 procedure TPDFGeoMeasure.SetBnds(const Value: TExtQuad);
@@ -5547,11 +5734,7 @@ end;
 procedure TPDFGeoMeasure.SetCRS(const Value: string);
 begin
   if not SameText(FCRS,Value) then
-  begin
     FCRS := Value;
-
-    FProjectedCrs := Pos('PROJCS',CRS) > 0;
-  end;
 end;
 
 procedure TPDFGeoMeasure.SetGpts(const Value: TExtQuad);
@@ -5566,58 +5749,45 @@ procedure TPDFGeoMeasure.SetLpts(const Value: TExtQuad);
 begin
   if EQuadEqual(FLpts,Value) then
     Exit;
-  
-  FLpts := Value;  
-end;
-
-function TPDFGeoMeasure.Validate: Boolean;
-begin
-  Result :=   Assigned(FOwner) and ( CRS <> '') and
-            ( Bbox[2].x - Bbox[0].x > 0 ) and  ( Bbox[2].y - Bbox[0].y > 0 ) and
-            ( Gpts[2].x - Gpts[0].x > 0 )  and ( Gpts[2].y - Gpts[0].y > 0 );
-end;
-
-{ TPDFGeoMeasures }
-
-procedure TPDFGeoMeasures.Add(const bbox, gpts: TExtQuad; const crs: string; 
-  const description: string; bnds: PExtQuad);
-var 
-  itm: TPDFGeoMeasure;
-  fnd: Boolean;
-begin
-  fnd := Find( bbox, gpts, crs, itm );
-
-  if not fnd then
-  begin
-    itm := TPDFGeoMeasure.Create( FEngine );
-    Add( itm );
-  end;
     
-  itm.FOwner := FOwner;
-  itm.Gpts := gpts;
-  itm.BBox := bbox;
-  itm.CRS := crs;
-  itm.Desctiption := description; 
-  if bnds <> nil then
-    itm.Bnds := bnds^;
+  FLpts := Value;    
 end;
 
-constructor TPDFGeoMeasures.Create(AEngine: TPDFEngine; AOwner: TPDFCanvas);
+{ TPDFViewPorts }
+
+function TPDFViewPorts.Add(const Area: TExtRect; Gpts: TExtQuad; const Crs: string): TPDFViewPort;
 begin
-  inherited Create(AEngine);
-  FOwner := AOwner;
+  if not Find(Area,Gpts, Crs, Result) then
+  begin
+    Result := TPDFViewPort.Create(FEngine,FOwner);    
+    Result.Area := Area;
+    Result.FMeasure.Gpts := Gpts;
+    Result.FMeasure.CRS := Crs;
+    
+    inherited Add(Result);
+  end;
 end;
 
-function TPDFGeoMeasures.Find(bbox, gpts: TExtQuad; const crs: string; out item: TPDFGeoMeasure): Boolean;
+constructor TPDFViewPorts.Create(AEngine: TPDFEngine; Owner: TPDFPage);
+begin
+  inherited Create( AEngine );
+  FOwner := Owner;
+end;
+
+function TPDFViewPorts.Find(const area: textrect; const Gpts: TExtQuad;
+  const Crs: string; out item: TPDFViewPort): Boolean;
 var
   i: Integer;
 begin
   for i := 0 to Count - 1 do
   begin
     item := Items[ i ];
-    Result := SameText( crs,item.CRS ) and 
-      EQuadEqual( bbox,item.bbox ) and EQuadEqual( gpts,item.Gpts );
-
+    
+    Result := ( item.Owner = Self.FOwner ) and 
+      ERectEqual( area,item.Area ) and 
+      EQuadEqual(item.Measure.Gpts,Gpts) and 
+      SameText(item.Measure.crs,Crs);
+      
     if Result then
       Exit;  
   end;
@@ -5626,92 +5796,10 @@ begin
   item := nil;
 end;
 
-function TPDFGeoMeasures.GetItemByIndex(idx: Integer): TPDFGeoMeasure;
+function TPDFViewPorts.GetItemByIndex(idx: Integer): TPDFViewPort;
 begin
-  Result := GetItem(idx) as TPDFGeoMeasure;
+  Result := GetItem(idx) as TPDFViewPort;
 end;
-
-function TPDFGeoMeasures.PrepareSave: Boolean;
-var 
-  i: Integer;
-begin
-  if not FPrepared then
-  begin
-    for i := 0 to FList.Count -1 do
-    begin
-      if (Items[i].ViewPortID < 0) then
-        Continue;
-               
-      FPrepared := True;
-    end;    
-  end;
-  
-  Result := FPrepared;
-end;
-
-procedure TPDFGeoMeasures.Save;
-var
-  i,n: Integer;
-  itm: TPDFGeoMeasure;
-begin
-(*
-/VP [ <<
-/Type /Viewport
-/BBox [ 6.531250 4.000000 743.468750 555.128418 ]
-/Measure 217 0 R
-/Name (AllLayers)
->> ]
->>
-
-217 0 obj
-<<
-/Type /Measure
-/Bounds [ 0.000000 0.000000 0.000000 1.000000 1.000000 1.000000 1.000000 0.000000 ]
-/GCS 218 0 R
-/GPTS [ 35.662407 -94.909767 36.294361 -94.899741 36.284127 -94.028131 35.652254 -94.046095 ]
-/LPTS [ 0.500000 0.500000 0.500000 0.518145 0.513570 0.518145 0.513570 0.500000 ]
-/PDU [ /M /SQM /DEG ]
-/Subtype /GEO
->>
-endobj
-
-218 0 obj
-<<
-/Type /PROJCS
-/WKT (PROJCS["North_America_Albers_Equal_Area_Conic",GEOGCS["GCS_North_American_1983",DATUM["D_North_American_1983",SPHEROID["GRS_1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Albers"],PARAMETER["false_easting",0],PARAMETER["false_northing",0],PARAMETER["latitude_of_origin",40],PARAMETER["central_meridian",-96],PARAMETER["standard_parallel_1",20],PARAMETER["standard_parallel_2",60],UNIT["Meter",1]])
->>
-endobj
-*)  
-
-  if not FPrepared then
-    Exit;
-    
-  n := FList.Count -1; 
-  // save viewports
-  for i := 0 to FList.Count - 1 do
-  begin
-    itm := Items[i];
-    
-    if itm.ViewPortID < 0 then    
-      Continue;
-
-    FEngine.StartObj( itm.ViewPortID );     
-    FEngine.SaveToStream( '/Type /Viewport' );     
-    FEngine.SaveToStream( '/BBox [ '+ itm.GetBboxText + ' ]' );
-                          
-    // link to measure dictionary        
-    FEngine.SaveToStream( '/Measure '+GetRef( itm.ID ));
-    // name of this viewport
-    if itm.Desctiption <> '' then
-      FEngine.SaveToStream ( '/Name ('+AnsiString(TPDFGeoMeasure(itm).Desctiption)+')');      
-
-    FEngine.CloseObj;
-  end;
-
-  for i := 0 to  n do
-    Items[i].Save;    
-end;
-
 
 end.
 

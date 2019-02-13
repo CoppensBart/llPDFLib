@@ -92,13 +92,12 @@ type
     FGrayID: Integer;
     FRGBID: Integer;
     FCMYKID: Integer;
-    FCurrentSaveID: Integer;
+    FCurrentSaveID: Integer;    
     procedure SetStream(const Value: TStream);
     function GetFileID: AnsiString;
     function GetGrayICCObject: Integer;
     function GetCMYKICCObject: Integer;
     function GetRGBICCObject: Integer;
-
   public
     Resources: TPDFResources;
     SecurityInfo: TPDFSecurity;
@@ -111,6 +110,8 @@ type
     procedure CloseStream;
     function GetNextID: Integer;
     function CreateMetadata(Data:Pointer; CryptData: Boolean): Integer;
+    function D2P(v: Extended): Extended;
+    function P2D(v: Extended): Extended;    
     procedure InitSecurity(KeyLength: TPDFSecurityState;Options: TPDFSecurityPermissions;
       UserPassword, OwnerPassword, FileName :AnsiString; CryptMetadata:Boolean);
     procedure SaveHeader(MinVersion:TPDFMinVersion);
@@ -215,6 +216,16 @@ begin
   FGrayID := 0 ;
   FRGBID := 0 ;
   FCMYKID := 0;
+end;
+
+function TPDFEngine.D2P(v: Extended): Extended;
+begin
+  Result := v * 72/Resolution;
+end;
+
+function TPDFEngine.P2D(v: Extended): Extended;
+begin
+  Result := v * (Resolution/72);
 end;
 
 destructor TPDFEngine.Destroy;

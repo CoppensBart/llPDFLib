@@ -69,6 +69,30 @@ type
 
 {#int}
 
+type
+  TTextCTM = record
+    a, b, c, d, x, y: Extended;
+  end;
+
+  PExt = ^Single;
+
+  TSingleArray = array [ 0..$FFFF ] of Single;
+  PSingleArray = ^TSingleArray;
+
+  TExtPoint = record
+    x, y: Extended;
+  end;
+
+  TExtRect = record
+  case Integer of
+    0: (Left, Top, Right, Bottom: Extended);
+    1: (TopLeft, BottomRight: TExtPoint);
+  end;  
+  
+  PExtQuad = ^TExtQuad;
+  TExtQuad = array [0..3] of TExtPoint; 
+  TIntQuad = array [0..3] of TPoint;   
+  
 
   /// <summary>
   ///   Specifies page content compression

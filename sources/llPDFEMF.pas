@@ -54,10 +54,6 @@ type
     lopnColor: COLORREF;
   end;
 
-  TExtRect = record
-    Left, Top, Right, Bottom: Extended;
-  end;
-
   PEMRSMALLTEXTOUTClipA = ^EMRSMALLTEXTOUTClipA;
 
   EMRSMALLTEXTOUTClipA = packed record
@@ -4153,12 +4149,14 @@ procedure TEMWParser.DoGdiComment(Data: PEMRGDIComment);
 var
   D: TBytes;
   L: Integer;
-  CommandText, V: string;
+  CommandText, CommandValue: string;
   Prsr: TStrings;
   V1,V2: Boolean;
-  Bbox, Gpts: TExtQuad;
-  Page: TPDFPage;  
-  h,w: Extended;
+  VpLocalArea,VpArea: TExtRect;
+  Gpts, Lpts: TExtQuad;
+  Page: TPDFPage;
+  Vp: TPDFViewPort;
+  Mat: TTextCTM;
 begin
   L := Data^.cbData;
   if L < 1 then Exit; 
@@ -4189,8 +4187,7 @@ begin
       Exit;
     end    
     else
-    if CommandText.StartsWith(AppendGeoViewPort) then
-//    if StrLComp(PChar(AppendGeoViewPort),PChar(CommandText),Length(AppendGeoViewPort)) <> 0 then
+    if StrLIComp(PChar(CommandText), PChar(AppendGeoViewPort), Length(AppendGeoViewPort)) = 0 then       
     begin
       if (FCanvas is TPDFForm) then
         Page := TPDFForm(FCanvas).Page
@@ -4211,32 +4208,82 @@ begin
           if SplitTxt(CommandText,'|',Prsr,True) < 3 then
             Exit;
 
-          Bbox := ZeroEQuad;  
+          VpLocalArea := ZeroERect;  
           Gpts := ZeroEQuad;          
-          V := Prsr.ValueFromIndex[Prsr.IndexOfName('BBOX')];
+          CommandValue := Prsr.ValueFromIndex[Prsr.IndexOfName('BBOX')];
           
-          if EQuadFromStr(V,Bbox) then
+          if ERectFromStr(CommandValue,VpLocalArea) then
           begin
-            V := Prsr.ValueFromIndex[Prsr.IndexOfName('GPTS')];          
-            if EQuadFromStr(V,Gpts) then
+            CommandValue := Prsr.ValueFromIndex[Prsr.IndexOfName('GPTS')];          
+            if EQuadFromStr(CommandValue,Gpts) then
             begin
-              V := Prsr.ValueFromIndex[Prsr.IndexOfName('CRS')];
-              if V <> '' then
+              CommandValue := Prsr.ValueFromIndex[Prsr.IndexOfName('CRS')];
+              if CommandValue <> '' then                                                                
               begin
-                for L := 0 to Length(Bbox) -1 do
-                begin                
-//                  Bbox[L].x := XOff + MapX(Bbox[L].x) * Abs( XScale * CalX );
-//                  Bbox[L].y := XOff + MapY(Bbox[L].y) * Abs( YScale * CalY );
-//                RawShowImage ( ImageIndex, ExtToIntX ( X ), ExtToIntY ( y ) - h / d2p, w / d2p, h / d2p, angle ,0, 0 );
-                  Bbox[L].x := GX(Bbox[L].x);
-                  Bbox[L].y := GY(Bbox[L].y);                                    
+                if FEngine.Resolution <> 72 then
+                begin
+                  VpArea.Left := FEngine.D2P( GX( VpLocalArea.Left) );             
+                  VpArea.Top := FEngine.D2P( GY( VpLocalArea.Top ) );                
+                  VpArea.Right := FEngine.D2P( GX( VpLocalArea.Right) );
+                  VpArea.Bottom := FEngine.D2P( GY( VpLocalArea.Bottom) );                
+                  
+                  // 0 1 0 0 1 0 1 1
+                  Mat.a := 1/ERectWidth(VpArea);
+                  Mat.b := 0;
+                  Mat.c := 0;
+                  Mat.d := -1/ERectHeight(VpArea);
+                  
+                  if FCanvas is TPDFForm then
+                  begin 
+                    Mat.x := TPDFForm(FCanvas).Matrix.x;
+                    Mat.y := TPDFForm(FCanvas).Matrix.y;
+                  end
+                  else
+                  begin
+                    Mat.x := 0;
+                    Mat.y := FEngine.P2D(Page.Height - FCanvas.Height);
+                  end;   
+                                                   
+                  // to userspace
+                  TransfPt(VpArea.TopLeft,Mat);
+                  TransfPt(VpArea.BottomRight,Mat);                  
+                end
+                else
+                begin                                
+                  VpArea.Left := FEngine.D2P( GX( VpLocalArea.Left) );             
+                  VpArea.Top := FEngine.D2P( FCanvas.Height - GY( VpLocalArea.Bottom ) );                
+                  VpArea.Right := FEngine.D2P( GX( VpLocalArea.Right) );
+                  VpArea.Bottom := FEngine.D2P( FCanvas.Height - GY( VpLocalArea.Top ) );
+
+                  if FCanvas is TPDFForm then
+                  begin
+                    TPDFForm(FCanvas).TransfPt(VpArea.TopLeft);
+                    TPDFForm(FCanvas).TransfPt(VpArea.BottomRight);
+                  end;
                 end;
-              
-                Page.AppendViewPort(
-                Bbox,
-                Gpts,
-                V, 
-                Prsr.ValueFromIndex[Prsr.IndexOfName('COMMENT')]);                
+                                
+                Vp := Page.AddGeoViewPort( VpArea,Gpts,CommandValue );
+                
+                Vp.Measure.DisplayCRS := Prsr.ValueFromIndex[Prsr.IndexOfName('DISPCRS')];
+                Vp.Description := Prsr.ValueFromIndex[Prsr.IndexOfName('COMMENT')];
+
+                Lpts[0] := EPoint( 0,1 );
+                Lpts[1] := EPoint( 0,0 );
+                Lpts[2] := EPoint( 1,0 );
+                Lpts[3] := EPoint( 1,1 );
+                
+                Vp.Measure.Lpts := Lpts;
+
+                if SameText( Prsr.ValueFromIndex[Prsr.IndexOfName('INVY')],'TRUE' ) then
+                begin
+                  VpArea.Top := -VpArea.Top;                    
+                  VpArea.Bottom := -VpArea.Bottom;
+                                    
+                  Vp.Area := VpArea;
+                end;
+                                
+                if FCanvas is TPDFForm then
+                  TPDFForm( FCanvas ).Measure := Vp.Measure;
               end;
             end;
           end;                                  
