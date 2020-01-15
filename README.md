@@ -11,7 +11,8 @@ llPDFLib is pure Object Pascal library to create PDF documents. This library doe
 <li>Unicode support</li>
 <li>PDF/A support</li>
 <li>Fill Patterns support</li>
-<li>Optional content (layers) support</li>
+<li>Optional content (layers) and group layers support</li>
+<li>Geospatial extensions support</li>
 <li> Acroforms (buttons, radiobuttons, checkboxes, comboboxes, text input fields) </li>
 <li> Watermarks </li>
 <li> Digital signatures</li>
