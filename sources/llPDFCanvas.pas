@@ -135,7 +135,7 @@ type
     /// Parent element of of this element
     /// </summary
     Parent: TOptionalContent;
-    constructor Create( PDFEngine: TPDFEngine;Name:AnsiString;Visible,CanExchange:Boolean);
+    constructor Create(PDFEngine: TPDFEngine; const Name: AnsiString; Visible, CanExchange: Boolean);
     destructor Destroy();override;
     /// <summary>
     /// Append nested element to this element
@@ -144,7 +144,7 @@ type
     /// <summary>
     /// Find nested element of this element
     /// </summary
-    function FindNested(NestedName: AnsiString): TOptionalContent;
+    function FindNested(const NestedName: AnsiString): TOptionalContent;
     /// <summary>
     /// Get list of nested elements for this element
     /// </summary
@@ -162,7 +162,7 @@ type
     /// <summary>
     /// Remove nested element by its name
     /// </summary
-    procedure RemoveNested(Name: AnsiString);overload;
+    procedure RemoveNested(const Name: AnsiString); overload;
     /// <summary>
     /// Remove all nested elements of this element
     /// </summary
@@ -300,7 +300,7 @@ type
     function GetBboxText: AnsiString;
     
   protected
-    FMeasure: TPDFGeoMeasure;    
+    FMeasure: TPDFGeoMeasure;
   public
     function Validate: Boolean;
     procedure Save; override;
@@ -392,12 +392,12 @@ type
     FFonts: TPDFFonts;
     FFontScale: Extended;
 // Work procedures
-    function GetStringType(CheckStr:AnsiString): TStringType;
+    function GetStringType(const CheckStr: AnsiString): TStringType;
     procedure BeginText;
     procedure DrawArcWithBezier(CenterX, CenterY, RadiusX, RadiusY, StartAngle, SweepRange: Extended; UseMoveTo: Boolean);
     procedure EndText;
     procedure ExtGlyphTextShow(Text: PWord; Len: Integer; Dx: PExt);
-    procedure ExtTextShow(TextStr: AnsiString; Dx: PExt);
+    procedure ExtTextShow(const TextStr: AnsiString; Dx: PExt);
     procedure ExtWideTextShow(Text: PWord; Len: Integer; Dx: PExt);
     function GetRawTextHeight: Extended;
     function IntToExtX(AX: Extended): Extended;
@@ -410,10 +410,10 @@ type
     procedure RawCurveto(X1, Y1, X2, Y2, X3, Y3: Extended);
     procedure RawEllipse(x1, y1, x2, y2: Extended);
     procedure RawExtGlyphTextOut(X, Y, Orientation: Extended; Text: PWord; Len: Integer; DX: PExt);
-    procedure RawExtTextOut(X, Y, Orientation: Extended; TextStr: AnsiString; Dx:PExt);
+    procedure RawExtTextOut(X, Y, Orientation: Extended; const TextStr: AnsiString; Dx: PExt);
     procedure RawExtWideTextOut(X, Y, Orientation: Extended; Text: PWord; Len: Integer; DX: PExt);
-    function RawGetTextWidth(Text: AnsiString): Extended;
-    function RawGetWideWidth(WideText: WideString): Extended;
+    function RawGetTextWidth(const Text: AnsiString): Extended;
+    function RawGetWideWidth(const WideText: WideString): Extended;
     procedure RawLineTo(X, Y: Extended);
     procedure RawMoveTo(X, Y: Extended);
     function RawPie(X1, Y1, x2, y2, BegAngle, EndAngle: Extended): TExtPoint; overload;
@@ -422,14 +422,14 @@ type
     procedure RawRectRotated(X, Y, W, H, Angle: Extended);
     procedure RawSetTextPosition(X, Y, Orientation: Extended);
     procedure RawShowImage(ImageIndex: Integer; X, Y, W, H, Angle: Extended; ShearX,ShearY: Double);
-    procedure RawTextOut(X, Y, Orientation: Extended; TextStr: AnsiString);
+    procedure RawTextOut(X, Y, Orientation: Extended; const TextStr: AnsiString);
     procedure RawTranslate(XT, YT, Sx, Sy: Extended);
-    procedure RawWideTextOut(X, Y, Orientation: Extended; WideText: WideString);
+    procedure RawWideTextOut(X, Y, Orientation: Extended; const WideText: WideString);
     procedure SetHeight(const Value: Integer);virtual;
     procedure SetIntCharacterSpacing(Spacing: Extended);
     procedure SetWidth(const Value: Integer);virtual;
     procedure TextShow(TextStr: AnsiString);
-    procedure WideTextShow(WideText: WideString);
+    procedure WideTextShow(const WideText: WideString);
     function GetHeight: Integer;
     function GetWidth: Integer;
   protected
@@ -448,7 +448,7 @@ type
     /// <param name="Action">
     ///   line to be added to canvas content
     /// </param>
-    procedure AppendAction(Action: AnsiString);
+    procedure AppendAction(const Action: AnsiString);
     /// <summary>
     ///   Draws an arc defined by a bounding rectangle and by the start and end angles of the arc
     /// </summary>
@@ -535,7 +535,7 @@ type
     /// <summary>
     ///   Add a commentary to the canvas content
     /// </summary>
-    procedure Comment(st: AnsiString);
+    procedure Comment(const st: AnsiString);
     /// <summary>
     ///   This procedure adds a Bezier cubic curve segment to the path starting at the current point as (x0,
     ///   y0), using two points (x1,y1) and (x2, y2) as control points, and terminating at point (x3, y3).
@@ -834,8 +834,8 @@ type
     /// <param name="FontCharset">
     ///   Charset, for ansi strings
     /// </param>
-    procedure SetActiveFont(FontName: String; FontStyle: TFontStyles; FontSize:
-        Extended; FontCharset: TFontCharset = ANSI_CHARSET); overload;
+    procedure SetActiveFont(const FontName: String; FontStyle: TFontStyles; FontSize: Extended;
+        FontCharset: TFontCharset = ANSI_CHARSET); overload;
     /// <summary>
     ///   This procedure sets the active standard Type1 font for text operations. <br />
     /// </summary>
@@ -864,7 +864,7 @@ type
     /// <param name="DashSpec">
     ///   Line dash pattern
     /// </param>
-    procedure SetDash(DashSpec: AnsiString);
+    procedure SetDash(const DashSpec: AnsiString);
     /// <summary>
     ///   The flatness tolerance controls the maximum permitted distance in device pixels between the
     ///   mathematically correct path and an approximation constructed from straight line segments.
@@ -1062,7 +1062,7 @@ type
     /// <param name="Vert">
     ///   Vertical alignment
     /// </param>
-    procedure TextBox(Rect: TRect; Text: AnsiString; Hor: THorJust; Vert: TVertJust);
+    procedure TextBox(Rect: TRect; const Text: AnsiString; Hor: THorJust; Vert: TVertJust);
     /// <summary>
     ///   Multi-line text display within the rectangle.
     /// </summary>
@@ -1090,7 +1090,7 @@ type
     /// <returns>
     ///   Returns the number of the characters of the text that are managed to put in the given size of the rectangle
     /// </returns>
-    function TextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight:integer; TextStr: String;Align:THorJust = hjLeft): Integer;{$ifdef UNICODE} overload; {$endif}
+    function TextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight: integer; const TextStr: string; Align: THorJust = hjLeft): Integer; overload;
     /// <summary>
     ///   Text string output
     /// </summary>
@@ -1106,7 +1106,7 @@ type
     /// <param name="TextStr">
     ///   Text string to output
     /// </param>
-    procedure TextOut(X, Y, Orientation: Extended; TextStr: String); {$ifdef UNICODE} overload; {$endif}
+    procedure TextOut(X, Y, Orientation: Extended; const TextStr: String); overload;
     /// <summary>
     ///   Returns the number of lines required to output multiline text within a limited
     ///   width.
@@ -1117,11 +1117,11 @@ type
     /// <param name="TextStr">
     ///   Text string
     /// </param>
-    function GetTextRowCount(BoxWidth: Integer; TextStr: String): Integer; {$ifdef UNICODE} overload; {$endif}
+    function GetTextRowCount(BoxWidth: Integer; const TextStr: String): Integer; overload;
     /// <summary>
     ///   Returns the width, necessary to output this text
     /// </summary>
-    function GetTextWidth(Text: String): Extended; {$ifdef UNICODE} overload; {$endif}
+    function GetTextWidth(const Text: String): Extended; overload;
     /// <summary>
     ///   Extended output of text string
     /// </summary>
@@ -1140,13 +1140,14 @@ type
     /// <param name="Dx">
     ///   Pointer to Extended array, where each element is the distance between symbols.
     /// </param>
-    procedure ExtTextOut(X, Y, Orientation: Extended; TextStr: String; Dx: PExt); {$ifdef UNICODE} overload; {$endif}
+    procedure ExtTextOut(X, Y, Orientation: Extended; const TextStr: String; Dx: PExt); overload;
 {$ifdef UNICODE}
-    function TextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight:integer; TextStr: AnsiString;Align:THorJust = hjLeft): Integer; overload;
-    procedure TextOut(X, Y, Orientation: Extended; TextStr: AnsiString);overload;
-    function GetTextRowCount(BoxWidth: Integer; TextStr: AnsiString): Integer;overload;
-    function GetTextWidth(Text: AnsiString): Extended;overload;
-    procedure ExtTextOut(X, Y, Orientation: Extended; TextStr: AnsiString; Dx: PExt);overload;
+    function TextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight: integer; const TextStr:
+        AnsiString; Align: THorJust = hjLeft): Integer; overload;
+    procedure TextOut(X, Y, Orientation: Extended; const TextStr: AnsiString); overload;
+    function GetTextRowCount(BoxWidth: Integer; const TextStr: AnsiString): Integer; overload;
+    function GetTextWidth(const Text: AnsiString): Extended; overload;
+    procedure ExtTextOut(X, Y, Orientation: Extended; const TextStr: AnsiString; Dx: PExt); overload;
 {$endif}
     /// <summary>
     ///   unicode text string output
@@ -1163,7 +1164,7 @@ type
     /// <param name="WideText">
     ///   Text string to output
     /// </param>
-    procedure WideTextOut(X, Y, Orientation: Extended; WideText:WideString);
+    procedure WideTextOut(X, Y, Orientation: Extended; const WideText: WideString);
     /// <summary>
     ///   Output of multiline unicode text within the rectangle.
     /// </summary>
@@ -1188,7 +1189,8 @@ type
     /// <returns>
     ///   Returns the number of the characters of the text that are managed to put in the given size of the rectangle
     /// </returns>
-    function WideTextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight: integer; WideText:WideString): Integer;
+    function WideTextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight: integer; const WideText:
+        WideString): Integer;
     /// <summary>
     ///   Extended output of unicode text string
     /// </summary>
@@ -1207,7 +1209,7 @@ type
     /// <param name="DX">
     ///   Pointer to Extended array, where each element is the distance between symbols.
     /// </param>
-    procedure ExtWideTextOut(X, Y, Orientation: Extended; WideText:WideString; DX: PExt);
+    procedure ExtWideTextOut(X, Y, Orientation: Extended; const WideText: WideString; DX: PExt);
     /// <summary>
     ///   Returns the number of lines required to output multiline unicode text within a limited
     ///   width.
@@ -1218,11 +1220,11 @@ type
     /// <param name="WideText">
     ///   Text string
     /// </param>
-    function GetWideTextRowCount(BoxWidth: Integer; WideText:WideString): Integer;
+    function GetWideTextRowCount(BoxWidth: Integer; const WideText: WideString): Integer;
     /// <summary>
     ///   Returns the width, necessary to output unicode text
     /// </summary>
-    function GetWideTextWidth(WideText: WideString): Extended;
+    function GetWideTextWidth(const WideText: WideString): Extended;
     /// <summary>
     ///   Canvas height
     /// </summary>
@@ -1352,7 +1354,7 @@ type
     /// <param name="URL">
     ///   URL for transition
     /// </param>
-    function SetUrl(ARect: TRect; URL: AnsiString): TPDFAnnotation;
+    function SetUrl(ARect: TRect; const URL: AnsiString): TPDFAnnotation;
     /// <summary>
     ///   Draws metafile on the page canvas as a series of lines, areas and text.
     /// </summary>
@@ -1605,7 +1607,7 @@ end;
 {
 ********************************** TPDFCanvas **********************************
 }
-procedure TPDFCanvas.AppendAction(Action: AnsiString);
+procedure TPDFCanvas.AppendAction(const Action: AnsiString);
 begin
   FContent.Add ( Action );
 end;
@@ -1659,7 +1661,7 @@ begin
   AppendAction ( 'h' );
 end;
 
-procedure TPDFCanvas.Comment(st: AnsiString);
+procedure TPDFCanvas.Comment(const st: AnsiString);
 begin
   AppendAction ( '% ' + st );
 end;
@@ -1956,7 +1958,7 @@ begin
   end;
 end;
 
-procedure TPDFCanvas.ExtTextOut(X, Y, Orientation: Extended; TextStr: AnsiString; Dx: PExt);
+procedure TPDFCanvas.ExtTextOut(X, Y, Orientation: Extended; const TextStr: AnsiString; Dx: PExt);
 var
   I, J: Integer;
   Ext: array of Single;
@@ -2051,7 +2053,7 @@ begin
   Ext := nil;
 end;
 
-procedure TPDFCanvas.ExtTextShow(TextStr: AnsiString; Dx: PExt);
+procedure TPDFCanvas.ExtTextShow(const TextStr: AnsiString; Dx: PExt);
 var
   CodePage: Integer;
   Len: Integer;
@@ -2124,7 +2126,8 @@ begin
   Factions := True;
 end;
 
-procedure TPDFCanvas.ExtWideTextOut(X, Y, Orientation: Extended; WideText:WideString; DX: PExt);
+procedure TPDFCanvas.ExtWideTextOut(X, Y, Orientation: Extended; const WideText: WideString; DX:
+    PExt);
 var
   I: Integer;
   Ext: array of Single;
@@ -2358,8 +2361,7 @@ begin
     Result := FCurrentFontSize * ( FCurrentFont.Ascent ) / 1000;
 end;
 
-function TPDFCanvas.GetTextRowCount(BoxWidth: Integer; TextStr: AnsiString):
-    Integer;
+function TPDFCanvas.GetTextRowCount(BoxWidth: Integer; const TextStr: AnsiString): Integer;
 var
   i, Len: Integer;
   Ch: AnsiChar;
@@ -2409,12 +2411,12 @@ begin
   end;
 end;
 
-function TPDFCanvas.GetTextWidth(Text: AnsiString): Extended;
+function TPDFCanvas.GetTextWidth(const Text: AnsiString): Extended;
 begin
   Result := RawGetTextWidth ( Text ) * D2P;
 end;
 
-function TPDFCanvas.GetWideTextRowCount(BoxWidth: Integer; WideText:WideString): Integer;
+function TPDFCanvas.GetWideTextRowCount(BoxWidth: Integer; const WideText: WideString): Integer;
 var
   BeforeLastWordWidth, LastWordWidth: Extended;
   i, OutLen: Integer;
@@ -2525,7 +2527,7 @@ begin
   Result := LineCount;
 end;
 
-function TPDFCanvas.GetWideTextWidth(WideText: WideString): Extended;
+function TPDFCanvas.GetWideTextWidth(const WideText: WideString): Extended;
 begin
   Result := IntToExtX ( RawGetWideWidth ( WideText ) );
 end;
@@ -2778,8 +2780,8 @@ begin
   ExtGlyphTextShow ( Text, Len, Dx );
 end;
 
-procedure TPDFCanvas.RawExtTextOut(X, Y, Orientation: Extended; TextStr: AnsiString;
-        Dx: PExt);
+procedure TPDFCanvas.RawExtTextOut(X, Y, Orientation: Extended; const TextStr: AnsiString; Dx:
+    PExt);
 begin
   RawSetTextPosition ( X, Y, Orientation );
   ExtTextShow ( TextStr, Dx );
@@ -2791,7 +2793,7 @@ begin
   ExtWideTextShow ( Text, Len, Dx );
 end;
 
-function TPDFCanvas.RawGetTextWidth(Text: AnsiString): Extended;
+function TPDFCanvas.RawGetTextWidth(const Text: AnsiString): Extended;
 var
   i, L: Integer;
   CF: TPDFFont;
@@ -2847,7 +2849,7 @@ begin
   end;
 end;
 
-function TPDFCanvas.RawGetWideWidth(WideText:WideString): Extended;
+function TPDFCanvas.RawGetWideWidth(const WideText: WideString): Extended;
 var
   CF: TPDFFont;
   L, I: Integer;
@@ -3026,7 +3028,7 @@ begin
 
 end;
 
-procedure TPDFCanvas.RawTextOut(X, Y, Orientation: Extended; TextStr: AnsiString);
+procedure TPDFCanvas.RawTextOut(X, Y, Orientation: Extended; const TextStr: AnsiString);
 begin
   RawSetTextPosition ( X, Y, Orientation );
   TextShow ( TextStr );
@@ -3037,7 +3039,7 @@ begin
   RawConcat ( 1, 0, 0, 1, xt, yt );
 end;
 
-procedure TPDFCanvas.RawWideTextOut(X, Y, Orientation: Extended; WideText: WideString);
+procedure TPDFCanvas.RawWideTextOut(X, Y, Orientation: Extended; const WideText: WideString);
 begin
   RawSetTextPosition ( X, Y, Orientation );
   WideTextShow ( WideText );
@@ -3116,8 +3118,8 @@ begin
   RawConcat ( sx, 0, 0, sy, 0, 0 );
 end;
 
-procedure TPDFCanvas.SetActiveFont(FontName: String; FontStyle: TFontStyles;
-        FontSize: Extended; FontCharset: TFontCharset = ANSI_CHARSET);
+procedure TPDFCanvas.SetActiveFont(const FontName: String; FontStyle: TFontStyles; FontSize:
+    Extended; FontCharset: TFontCharset = ANSI_CHARSET);
 begin
   if ( FCurrentFontName <> FontName ) or ( FCurrentFontStyle <> FontStyle ) or
     ( FontSize <> FCurrentFontSize ) or ( not FIsTrueType )then
@@ -3264,7 +3266,7 @@ begin
   end;
 end;
 
-procedure TPDFCanvas.SetDash(DashSpec: AnsiString);
+procedure TPDFCanvas.SetDash(const DashSpec: AnsiString);
 begin
   EndText;
   if FCurrentDash <> DashSpec then
@@ -3433,7 +3435,7 @@ begin
   AppendAction ( 'S' );
 end;
 
-procedure TPDFCanvas.TextBox(Rect: TRect; Text: AnsiString; Hor: THorJust; Vert: TVertJust);
+procedure TPDFCanvas.TextBox(Rect: TRect; const Text: AnsiString; Hor: THorJust; Vert: TVertJust);
 var
   x, y: Extended;
 begin
@@ -3458,7 +3460,7 @@ begin
   FBaseLine := BaseLine;
 end;
 
-procedure TPDFCanvas.TextOut(X, Y, Orientation: Extended; TextStr: AnsiString);
+procedure TPDFCanvas.TextOut(X, Y, Orientation: Extended; const TextStr: AnsiString);
 var
   O: Extended;
   ws, URL: AnsiString;
@@ -3525,8 +3527,8 @@ begin
   FFontScale := Scale;
 end;
 
-function TPDFCanvas.TextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight:
-        integer; TextStr: AnsiString;Align:THorJust = hjLeft): Integer;
+function TPDFCanvas.TextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight: integer; const
+    TextStr: AnsiString; Align: THorJust = hjLeft): Integer;
 var
   i, Count, Len: Integer;
   StrLine, OutTxtLine: AnsiString;
@@ -3707,7 +3709,7 @@ begin
   RawTranslate ( ExtToIntX ( XT ), ExtToIntY ( YT ) ,0 ,0 );
 end;
 
-procedure TPDFCanvas.WideTextOut(X, Y, Orientation: Extended; WideText:WideString);
+procedure TPDFCanvas.WideTextOut(X, Y, Orientation: Extended; const WideText: WideString);
 var
   O: Extended;
   ws, URL: AnsiString;
@@ -3792,7 +3794,8 @@ begin
       ExtToIntY ( Y ) - O * cos ( Orientation * Pi / 180 ), Orientation, WideText );
 end;
 
-function TPDFCanvas.WideTextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight: integer;WideText:WideString): Integer;
+function TPDFCanvas.WideTextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight: integer; const
+    WideText: WideString): Integer;
 var
   BeforeLastWordWidth, LastWordWidth: Extended;
   i, OutLen: Integer;
@@ -3931,7 +3934,7 @@ begin
 end;
 
 
-procedure TPDFCanvas.WideTextShow(WideText:WideString);
+procedure TPDFCanvas.WideTextShow(const WideText: WideString);
 var
   Cr, Sp: Integer;
   L,i: Integer;
@@ -3998,7 +4001,8 @@ begin
 end;
 
 {$ifdef UNICODE}
-function TPDFCanvas.TextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight:integer; TextStr: string;Align:THorJust = hjLeft): Integer;
+function TPDFCanvas.TextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight: integer; const
+    TextStr: String; Align: THorJust = hjLeft): Integer;
 begin
   if FIsTrueType then
     Result := WideTextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight,TextStr)
@@ -4006,14 +4010,14 @@ begin
     Result := TextOutBox(LTCornX, LTCornY, Interval, BoxWidth, BoxHeight,AnsiString(TextStr),Align);
 end;
 
-procedure TPDFCanvas.TextOut(X, Y, Orientation: Extended; TextStr: string);
+procedure TPDFCanvas.TextOut(X, Y, Orientation: Extended; const TextStr: String);
 begin
   if FIsTrueType then
     WideTextOut( X, Y, Orientation, TextStr)
   else
     TextOut( X,Y,Orientation, AnsiString(TextStr));
 end;
-function TPDFCanvas.GetTextRowCount(BoxWidth: Integer; TextStr: string): Integer;
+function TPDFCanvas.GetTextRowCount(BoxWidth: Integer; const TextStr: String): Integer;
 begin
   if FIsTrueType then
     Result := GetWideTextRowCount( BoxWidth, TextStr)
@@ -4021,14 +4025,14 @@ begin
     Result := GetTextRowCount(BoxWidth, AnsiString(TextStr));
 end;
 
-function TPDFCanvas.GetTextWidth(Text: string): Extended;
+function TPDFCanvas.GetTextWidth(const Text: String): Extended;
 begin
   if FIsTrueType then
     Result := GetWideTextWidth( Text)
   else
     Result := GetTextWidth( AnsiString(Text));
 end;
-procedure TPDFCanvas.ExtTextOut(X, Y, Orientation: Extended; TextStr: string; Dx: PExt);
+procedure TPDFCanvas.ExtTextOut(X, Y, Orientation: Extended; const TextStr: String; Dx: PExt);
 begin
   if FIsTrueType then
     ExtWideTextOut(x,  y, Orientation, TextStr, DX)
@@ -4238,13 +4242,21 @@ begin
 
   if Assigned( FViewPorts ) and (FViewPorts.Count > 0 )then
   begin
-    Eng.SaveToStream('/VP[', False);
-     
-    for I := 0 to FViewPorts.Count -1 do
-    begin
-      Eng.SaveToStream( FViewPorts.Items[I].AsText(I > 0), False );        
-    end;
-    Eng.SaveToStream(']');  
+    Eng.SaveToStream('/VP ', False);
+    // adt: 
+    // some tools like globalmapper require 
+    // define "VP" at the array explicitly.
+    // but abobe acrobat pdf preflight tool generates 
+    // warning we have only one item in viewport list
+    // so warning is the lesser of evils)
+      Eng.SaveToStream( '[ ', False );
+
+      for I := 0 to FViewPorts.Count -1 do
+      begin
+        Eng.SaveToStream( FViewPorts.Items[I].AsText(I > 0), False );        
+      end;
+      
+      Eng.SaveToStream( ']' );      
   end;
     
   if FThumbnail >= 0 then
@@ -4314,7 +4326,7 @@ begin
   Result.BorderStyle:='[]';
 end;
 
-function TPDFPage.SetUrl ( ARect: TRect; URL: AnsiString ): TPDFAnnotation;
+function TPDFPage.SetUrl(ARect: TRect; const URL: AnsiString): TPDFAnnotation;
 begin
   Result := TPDFActionAnnotation.Create ( Self, ARect,
     TPDFURLAction.Create(TPDFActions(FOwner.FActions), URL));
@@ -5190,8 +5202,8 @@ begin
   FNestedContent.AddObject(Content.FName,Content);
 end;
 
-constructor TOptionalContent.Create(PDFEngine: TPDFEngine; Name: AnsiString;
-  Visible, CanExchange: Boolean);
+constructor TOptionalContent.Create(PDFEngine: TPDFEngine; const Name: AnsiString; Visible,
+    CanExchange: Boolean);
 begin
   inherited Create(PDFEngine);
 
@@ -5214,7 +5226,7 @@ begin
   end;
 end;
 
-procedure TOptionalContent.RemoveNested(Name: AnsiString);
+procedure TOptionalContent.RemoveNested(const Name: AnsiString);
 var
   Index: Integer;
 begin
@@ -5288,7 +5300,7 @@ begin
   inherited;
 end;
 
-function TOptionalContent.FindNested(NestedName: AnsiString): TOptionalContent;
+function TOptionalContent.FindNested(const NestedName: AnsiString): TOptionalContent;
 var
   i : Integer;
   n : TOptionalContent;
@@ -5389,27 +5401,29 @@ begin
   for i := 0 to FList.Count- 1 do
     FEngine.SaveToStream ( ' '+ TPDFObject(FList[i]).RefID, False);
   FEngine.SaveToStream ( ' ]');
-  FEngine.SaveToStream ( '/D <<');
+  
+  FEngine.SaveToStream ( '/D <<');  
   FEngine.SaveToStream ( '/ON [', false );
   for i := 0 to FList.Count - 1 do
     if TOptionalContent(FList[i]).FVisible then
-    FEngine.SaveToStream ( ' '+ TPDFObject(FList[i]).RefID, False);
+      FEngine.SaveToStream ( ' '+ TPDFObject(FList[i]).RefID, False);      
   FEngine.SaveToStream ( ' ]');
-  FEngine.SaveToStream ( '/OFF [', false );
+  
+  FEngine.SaveToStream ( '/OFF [', false );  
   for i := 0 to FList.Count - 1 do
-    if not TOptionalContent(FList[i]).FVisible then
-    FEngine.SaveToStream ( ' '+ TPDFObject(FList[i]).RefID, False);
+    if not TOptionalContent(FList[i]).FVisible then    
+    FEngine.SaveToStream ( ' '+ TPDFObject(FList[i]).RefID, False);    
   FEngine.SaveToStream ( ' ]');
+  
   FEngine.SaveToStream ( '/Locked [', false );
   for i := 0 to FList.Count - 1 do
     if not TOptionalContent(FList[i]).FCAN then
       FEngine.SaveToStream ( ' '+ TPDFObject(FList[i]).RefID, False);
   FEngine.SaveToStream ( ' ]');
 
-  processed := TList.Create;
+  Processed := TList.Create;
   try
     FEngine.SaveToStream ( '/Order [', false );
-
     for i := 0 to FList.Count - 1 do
     begin
       // to avoid duplicates
@@ -5418,12 +5432,28 @@ begin
 
       FEngine.SaveToStream ( TOptionalContent(FList[i]).RawString, False );
 
-      TOptionalContent(FList[i]).GetNested(processed,False,True);
+      TOptionalContent(FList[i]).GetNested(Processed,False,True);
     end;
-
     FEngine.SaveToStream ( ' ]');
+
+
+//    FEngine.SaveToStream ( '/Intent',false );
+//    for i := 0 to FList.Count - 1 do
+//    begin
+//      // to avoid duplicates
+//      if Processed.IndexOf(FList[i]) <> -1 then
+//        Continue;
+//
+//      if Processed.Count = 0 then
+//        FEngine.SaveToStream ( 'View' )
+//      else  
+//        FEngine.SaveToStream ( 'Design' );
+//        
+//      TOptionalContent(FList[i]).GetNested(Processed,False,True);        
+//    end;
+        
   finally
-    processed.Free;
+    Processed.Free;
   end;
   
   FEngine.SaveToStream ( ' >>');
@@ -5448,13 +5478,13 @@ begin
   Result := Assigned( Self.Item[AName] );
 end;
 
-function TPDFCanvas.GetStringType(CheckStr:AnsiString): TStringType;
+function TPDFCanvas.GetStringType(const CheckStr: AnsiString): TStringType;
 var
   i : Integer;
   fnd : Boolean;
 begin
   fnd := false;
-  for i:= 0 to Length(CheckStr) do
+  for i:= 0 to Length(CheckStr) -1 do
     if CheckStr[i] > #127 then
     begin
       fnd := true;
@@ -5497,7 +5527,6 @@ begin
   
   Eng.StartObj( ID );
   Eng.SaveToStream( '/Type /Viewport', False);
-//  if not ((FMeasure.Canvas is TPDFForm) {and (FMeasure.OwnBBox)}) then  
   Eng.SaveToStream( '/BBox [ '+ GetBboxText + ' ]', False );    
   Eng.SaveToStream( '/Measure '+GetRef( FMeasure.ID ), False);
   if Description <> '' then
@@ -5507,17 +5536,14 @@ end;
 
 function TPDFViewPort.AsText(Append: Boolean): AnsiString;
 begin
-  Result := '<< /Type /Viewport';
-  
-//  if not ((FMeasure.Canvas is TPDFForm) {and (FMeasure.OwnBBox)}) then  
-    Result := Result + '/BBox [ '+GetBboxText+ ']';
-
-  Result := Result + '/Measure '+GetRef( FMeasure.ID );    
+  Result := '<< /Type /Viewport '; 
+  Result := Result + '/BBox [ '+GetBboxText+ ']';
+  Result := Result + ' /Measure '+GetRef( FMeasure.ID );    
   if Description <> '' then
-    Result := Result + '/Name (' +AnsiString(Description)+ ')';
+    Result := Result + ' /Name (' +AnsiString(Description)+ ')';
 
-  Result := Result + '>>';
-  
+  Result := Result + ' >>';
+
   if Append then
     Result := ' '+ Result;
 end;
@@ -5678,7 +5704,7 @@ begin
   if CheckProjected( CRS ) then
     Eng.SaveToStream( '/Type /PROJCS' )
   else
-    Eng.SaveToStream( '/Type /GEOCS' );
+    Eng.SaveToStream( '/Type /GEOGCS' );
 
   Eng.SaveToStream( '/WKT ('+ AnsiString( CRS ) + ')' );
   Eng.CloseObj();  
@@ -5691,7 +5717,7 @@ begin
     if CheckProjected( DisplayCRS ) then
       Eng.SaveToStream( '/Type /PROJCS' )
     else
-      Eng.SaveToStream( '/Type /GEOCS' );
+      Eng.SaveToStream( '/Type /GEOGCS' );
     
     Eng.SaveToStream( '/WKT ('+ AnsiString( DisplayCRS ) + ')' );
     Eng.CloseObj();    
@@ -5710,7 +5736,8 @@ begin
    
   Eng.SaveToStream( '/GPTS [ ' + GetGptsText + ' ]');
   Eng.SaveToStream( '/LPTS [ ' + GetLptsText + ' ]');
-  Eng.SaveToStream( '/PDU [ /M /SQM /DEG ]' ,False);
+  Eng.SaveToStream( '/PDU [ (M) (SQM) (DEG) ]' ,False);
+  
   Eng.CloseObj();  
 end;
 

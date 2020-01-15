@@ -59,7 +59,7 @@ type
     procedure DrawHorLine(XStart,XEnd, Y:Integer;IsBlack:Boolean);
     procedure MoveAndClear(DestSymbol: TBWImage; StartPosition: TImgPoint;Border: TImgBorder);
     procedure InitBlackPoint(var BlackPoint: TImgPoint);
-    procedure SaveToFile(FileName:String);
+    procedure SaveToFile(const FileName: String);
     property Pixel[X,Y: Integer]:Boolean read GetPixel write SetPixel;
     property Width: Integer read FWidth;
     property Height: Integer read FHeight;
@@ -1198,7 +1198,7 @@ begin
 end;
 
 
-procedure TBWImage.SaveToFile(FileName: String);
+procedure TBWImage.SaveToFile(const FileName: String);
 var
   BMP : TBitmap;
 begin
@@ -1216,6 +1216,8 @@ end;
 
 constructor TJBIG2Options.Create;
 begin
+  inherited Create;
+  
   FLossyLevel := 5;
   FSkipBlackDots := True;
   FBlackDotSize := 3;

@@ -211,7 +211,7 @@ type
 
 function OIDtoHashClass(OID:TOIDs):THashClass;
 
-function StringToHash(HashClass:THashClass;Str:AnsiString):AnsiString;
+function StringToHash(HashClass: THashClass; const Str: AnsiString): AnsiString;
 procedure DataToHash(HashClass:THashClass;Input: Pointer; InputLen: Integer; const Digest);
 
 function CalcAESSize(Encryption:TPDFSecurityState;Size: Integer): Integer;
@@ -575,7 +575,7 @@ begin
   end;
 end;
 
-function StringToHash(HashClass:THashClass;Str:AnsiString):AnsiString;
+function StringToHash(HashClass: THashClass; const Str: AnsiString): AnsiString;
 var
   Hash: THash;
 begin
@@ -593,9 +593,9 @@ end;
 
 procedure DataToHash(HashClass:THashClass;Input: Pointer; InputLen: Integer; const Digest);
 var
-  Hash:TMD5Hash;
+  Hash:THash;
 begin
-  Hash := TMD5Hash.Create;
+  Hash := HashClass.Create;
   try
     Hash.Update(Input^, InputLen);
     Hash.Finish(@Digest);

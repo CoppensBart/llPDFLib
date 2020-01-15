@@ -908,6 +908,7 @@ implementation
 
 constructor TPDFEMFParseOptions.Create;
 begin
+  inherited Create;
   FUseScreen := True;
   FUsedDC := GetDC ( 0 );
   FJPEG := False;

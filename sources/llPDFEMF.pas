@@ -4262,7 +4262,7 @@ begin
                   end;
                 end;
                                 
-                Vp := Page.AddGeoViewPort( VpArea,Gpts,CommandValue );
+                Vp := Page.AddGeoViewPort( VpArea, Gpts, CommandValue );
                 
                 Vp.Measure.DisplayCRS := Prsr.ValueFromIndex[Prsr.IndexOfName('DISPCRS')];
                 Vp.Description := Prsr.ValueFromIndex[Prsr.IndexOfName('COMMENT')];
@@ -4480,10 +4480,22 @@ begin
   begin
     B := TBitmap.Create;
     try
+      Move(Data^.dwRop, A, SizeOf(A));          
+      
+      if A.AlphaFormat = AC_SRC_ALPHA then
+      begin
+        B.PixelFormat := pf32bit;      
+        B.AlphaFormat := afDefined;
+      end;
+        
       B.Width := Data^.cxSrc;
       B.Height := Data^.cySrc;
-      StretchDIBits(B.Canvas.Handle, 0, 0, B.Width, B.Height, Data^.xSrc, Data^.ySrc, B.Width, B.Height, O, P^,
-        Data^.iUsageSrc, SRCCOPY);
+       
+      StretchDIBits(B.Canvas.Handle, 
+        0, 0, B.Width, B.Height, 
+        Data^.xSrc, Data^.ySrc, B.Width, B.Height, 
+        O, P^, Data^.iUsageSrc, SRCCOPY);
+        
       Err := False;
       H := LoadLibrary('msimg32.dll');
       if H <> 0 then
@@ -4495,9 +4507,10 @@ begin
           try
             B1.Width := B.Width;
             B1.Height := B.Height;
-            Move(Data^.dwRop, A, SizeOf(A));
+
             Func(B1.Canvas.Handle, 0, 0, B.Width, B.Height, B.Canvas.Handle, 0, 0, B.Width, B.Height, A);
-            I := AddBitmap(B1);
+
+            I := AddBitmap(B1,B);
           finally
             B1.Free;
           end;

@@ -94,7 +94,7 @@ type
     /// <param name="URL">
     ///   URL which will be requested when performing this action
     /// </param>
-    constructor Create( Actions: TPDFActions;URL: AnsiString);
+    constructor Create(Actions: TPDFActions; const URL: AnsiString);
   end;
 
 
@@ -196,7 +196,8 @@ type
     /// <remarks>
     ///   Destination can be created with TPDFDocument.Names.AppendNamedDestination
     /// </remarks>
-    constructor Create( Actions: TPDFActions;Document:string; Destination:AnsiString;InNewWindow: Boolean);
+    constructor Create(Actions: TPDFActions; Document: string; const Destination: AnsiString;
+        InNewWindow: Boolean);
   end;
 
 
@@ -223,7 +224,7 @@ type
     /// <param name="JavaScript">
     ///   JavaScript when this action is performing
     /// </param>
-    constructor Create( Actions: TPDFActions;JavaScript:AnsiString);
+    constructor Create(Actions: TPDFActions; const JavaScript: AnsiString);
   end;
 
 
@@ -248,7 +249,7 @@ type
     /// <param name="FileName">
     ///   Name of the file from which data will be imported to fill in online forms
     /// </param>
-    constructor Create( Actions: TPDFActions;FileName:string);
+    constructor Create(Actions: TPDFActions; const FileName: string);
   end;
 
 
@@ -280,7 +281,8 @@ type
     /// <param name="InNewWindow">
     ///   Specifies, whether to open the document in a new window.
     /// </param>
-    constructor Create( Actions: TPDFActions;Document:string;PageIndex:Integer;InNewWindow: Boolean);
+    constructor Create(Actions: TPDFActions; const Document: string; PageIndex: Integer; InNewWindow:
+        Boolean);
   end;
 
 
@@ -315,7 +317,7 @@ end;
 
 { TPDFUrlAction }
 
-constructor TPDFUrlAction.Create(Actions: TPDFActions; URL: AnsiString);
+constructor TPDFUrlAction.Create(Actions: TPDFActions; const URL: AnsiString);
 begin
   inherited Create( Actions );
   FUrl := URL;
@@ -367,8 +369,8 @@ end;
 
 { TPDFNamedDestinationAction }
 
-constructor TPDFNamedDestinationAction.Create(Actions: TPDFActions;
-  Document:string; Destination: AnsiString; InNewWindow: Boolean);
+constructor TPDFNamedDestinationAction.Create(Actions: TPDFActions; Document: string; const
+    Destination: AnsiString; InNewWindow: Boolean);
 begin
   inherited Create( Actions );
   FDocument := Document;
@@ -400,8 +402,8 @@ end;
 
 { TPDFGotoRemoteAction }
 
-constructor TPDFGotoRemoteAction.Create(Actions: TPDFActions;
-  Document: string; PageIndex: Integer; InNewWindow: Boolean);
+constructor TPDFGotoRemoteAction.Create(Actions: TPDFActions; const Document: string; PageIndex:
+    Integer; InNewWindow: Boolean);
 begin
   if PageIndex < 0 then
     raise EPDFException.Create ( SPageIndexCannotBeNegative );
@@ -429,8 +431,7 @@ end;
 
 { TPDFJavaScriptAction }
 
-constructor TPDFJavaScriptAction.Create(Actions: TPDFActions;
-  JavaScript: AnsiString);
+constructor TPDFJavaScriptAction.Create(Actions: TPDFActions; const JavaScript: AnsiString);
 begin
   if JavaScript = '' then
     raise EPDFException.Create ( SJavaScriptCannotBeEmpty );
@@ -449,8 +450,7 @@ end;
 
 { TPDFImportDataAction }
 
-constructor TPDFImportDataAction.Create(Actions: TPDFActions;
-  FileName: string);
+constructor TPDFImportDataAction.Create(Actions: TPDFActions; const FileName: string);
 begin
   if FileName = '' then
     raise EPDFException.Create ( SFileNameCannotBeEmpty );

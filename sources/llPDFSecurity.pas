@@ -45,11 +45,14 @@ type
   end;
 
 
-  procedure InitDocumentSecurity(var DocSec: TPDFSecurity; KeyLength: TPDFSecurityState;
-    Options: TPDFSecurityPermissions; UserPassword, OwnerPassword, FileName :AnsiString; CryptMetadata:Boolean);
-  procedure CryptStringToStream(DocSec: TPDFSecurity; AStream:TStream; St:AnsiString;ID: Integer);
+  procedure InitDocumentSecurity(var DocSec: TPDFSecurity; KeyLength: TPDFSecurityState; Options:
+      TPDFSecurityPermissions; const UserPassword, OwnerPassword, FileName: AnsiString;
+      CryptMetadata: Boolean);
+  procedure CryptStringToStream(DocSec: TPDFSecurity; AStream: TStream; const St: AnsiString; ID:
+      Integer);
   procedure CryptStreamToStream(DocSec: TPDFSecurity; FromStream:TMemoryStream; ToStream : TStream; ID: Integer);
-  function CryptString( DocSec: TPDFSecurity; St:AnsiString;ID: Integer;Wrap:Boolean = true ):AnsiString;
+  function CryptString(DocSec: TPDFSecurity; const St: AnsiString; ID: Integer; Wrap: Boolean =
+      true): AnsiString;
 
 
 
@@ -65,8 +68,9 @@ const
     $56, $FF, $FA, $01, $08, $2E, $2E, $00, $B6, $D0, $68,
     $3E, $80, $2F, $0C, $A9, $FE, $64, $53, $69, $7A );
 
-procedure InitDocumentSecurity(var DocSec: TPDFSecurity; KeyLength: TPDFSecurityState;
-      Options: TPDFSecurityPermissions; UserPassword, OwnerPassword, FileName :AnsiString; CryptMetadata:Boolean);
+procedure InitDocumentSecurity(var DocSec: TPDFSecurity; KeyLength: TPDFSecurityState; Options:
+    TPDFSecurityPermissions; const UserPassword, OwnerPassword, FileName: AnsiString;
+    CryptMetadata: Boolean);
 var
   S, W: AnsiString;
   Pass: array [ 1..32 ] of byte;
@@ -326,7 +330,8 @@ begin
   end;
 end;
 
-procedure CryptStringToStream(DocSec: TPDFSecurity; AStream:TStream; St:AnsiString;ID: Integer);
+procedure CryptStringToStream(DocSec: TPDFSecurity; AStream: TStream; const St: AnsiString; ID:
+    Integer);
 var
   S: AnsiString;
 begin
@@ -334,7 +339,8 @@ begin
   AStream.Write ( s[1], Length ( S ) );
 end;
 
-function CryptString( DocSec: TPDFSecurity; St:AnsiString;ID: Integer;Wrap:Boolean = true ):AnsiString;
+function CryptString(DocSec: TPDFSecurity; const St: AnsiString; ID: Integer; Wrap: Boolean =
+    true): AnsiString;
 var
   I, L, K:Integer;
   AES: TAESCipher;

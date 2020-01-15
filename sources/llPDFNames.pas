@@ -73,7 +73,7 @@ type
     /// <param name="Title">
     ///   Title of the file, displayed in the reader
     /// </param>
-    procedure AppendEmbeddedFile(FileName: string; Title:string);
+    procedure AppendEmbeddedFile(const FileName, Title: string);
     /// <summary>
     ///   Adds named destinations to the generated document
     /// </summary>
@@ -86,7 +86,7 @@ type
     /// <param name="TopOffset">
     ///   Page offset
     /// </param>
-    procedure AppendNamedDestination ( Dest: AnsiString; Page: Integer; TopOffset: Integer );
+    procedure AppendNamedDestination(const Dest: AnsiString; Page, TopOffset: Integer);
     /// <summary>
     ///   Add named JavaScript function to the generated document
     /// </summary>
@@ -99,7 +99,7 @@ type
     /// <param name="ABody">
     ///   Body of the function
     /// </param>
-    procedure AddJavaScriptFunction ( AName, AParams, ABody: AnsiString );
+    procedure AddJavaScriptFunction(const AName, AParams, ABody: AnsiString);
   end;
 
 
@@ -119,7 +119,7 @@ llPDFMisc, llPDFResources, llPDFSecurity, llPDFCrypt;
 
 { TPDFNames }
 
-procedure TPDFNames.AddJavaScriptFunction(AName, AParams, ABody: AnsiString);
+procedure TPDFNames.AddJavaScriptFunction(const AName, AParams, ABody: AnsiString);
 var
   i:Integer;
 begin
@@ -130,7 +130,7 @@ begin
   FJavaScripts[i].Body := ABody;
 end;
 
-procedure TPDFNames.AppendEmbeddedFile(FileName, Title: string);
+procedure TPDFNames.AppendEmbeddedFile(const FileName, Title: string);
 var
   i:Integer;
 begin
@@ -140,8 +140,7 @@ begin
   FEmbeddedFiles[i].FileName := FileName;
 end;
 
-procedure TPDFNames.AppendNamedDestination(Dest: AnsiString; Page,
-  TopOffset: Integer);
+procedure TPDFNames.AppendNamedDestination(const Dest: AnsiString; Page, TopOffset: Integer);
 var
   i: Integer;
 begin

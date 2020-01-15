@@ -113,7 +113,8 @@ type
     procedure ExtractPostTable(Src: TTrueTypeTable; var Dest: TTrueTypeTable);
     procedure LoadFontInfo(DC: HDC);
     procedure LoadGlyphsInfo(DC: HDC);
-    procedure LoadOneTable(DC: HDC; TableName: String;  var Table: TTrueTypeTable; CanIgnore: Boolean = False);
+    procedure LoadOneTable(DC: HDC; const TableName: String; var Table: TTrueTypeTable; CanIgnore:
+        Boolean = False);
     procedure ProcessCMAP(Buffer: Pointer);
     function GetAscent: Integer;
     function GetDescent: Integer;
@@ -129,10 +130,11 @@ type
     procedure WorkWithDC(Action: TActionDC);
     procedure QuickSortIdxRec(var Arr: TIdxRecArray; L, R: Integer);
     procedure CheckTables(Tables: TTrueTypeTables; var Count: Integer);
-    procedure SaveTableToStream(Name: AnsiString; MainStream, AStream: TStream; var Table: TTrueTypeTable; Delta: Cardinal);
+    procedure SaveTableToStream(const Name: AnsiString; MainStream, AStream: TStream; var Table:
+        TTrueTypeTable; Delta: Cardinal);
     procedure SaveAllInfo(Stream:TStream; MaxIdx:Integer);
   public
-    constructor Create(FontName:String;FontStyle:TFontStyles);
+    constructor Create(const FontName: String; FontStyle: TFontStyles);
     destructor Destroy;override;
     function GetIdxByUnicode(Unicode: Word): Integer;
     procedure PrepareASCIIFont(Used:PByteArray;Stream:TStream);
@@ -403,7 +405,7 @@ begin
 end;
 
 
-constructor TTrueTypeManager.Create(FontName: String; FontStyle: TFontStyles);
+constructor TTrueTypeManager.Create(const FontName: String; FontStyle: TFontStyles);
 begin
   FFontName := FontName;
   FFontStyle := FontStyle;
@@ -411,7 +413,8 @@ begin
   FGlyphsLoaded := False;
 end;
 
-procedure TTrueTypeManager.SaveTableToStream(Name:AnsiString;MainStream,AStream:TStream; var Table: TTrueTypeTable;Delta:Cardinal);
+procedure TTrueTypeManager.SaveTableToStream(const Name: AnsiString; MainStream, AStream: TStream;
+    var Table: TTrueTypeTable; Delta: Cardinal);
 var
   TableIndex:TTableInfoRec;
   i: Integer;
@@ -978,7 +981,8 @@ begin
   FGlyphsLoaded := true;
 end;
 
-procedure TTrueTypeManager.LoadOneTable(DC: HDC; TableName: String; var Table: TTrueTypeTable; CanIgnore: Boolean);
+procedure TTrueTypeManager.LoadOneTable(DC: HDC; const TableName: String; var Table:
+    TTrueTypeTable; CanIgnore: Boolean = False);
 var
   TN:DWORD;
   i: integer;
@@ -1226,31 +1230,34 @@ begin
       begin
         idx := arr[i].Second;
         Size := FGlyphsList[idx].Size;
-        P := Pointer(FarInteger(FTables.Glyf.Table)+Cardinal(FGlyphsList[idx].DataOffset));
-        MoveMemory(WrkGlyph,P,Size);
-        P := WrkGlyph;
-        if swap(P^.ContourCount) < 0 then
+        if Size > 0 then
         begin
-          Off := SizeOf(TGlyphHeader);
-          while true do
+          P := Pointer(FarInteger(FTables.Glyf.Table)+Cardinal(FGlyphsList[idx].DataOffset));
+          MoveMemory(WrkGlyph,P,Size);
+          P := WrkGlyph;
+          if swap(P^.ContourCount) < 0 then
           begin
-            Compound := Pointer(FarInteger(P)+Cardinal(Off));
-            Idx := Swap(Compound^.GlyphIndex);
-            Compound^.GlyphIndex := Swap(FGlyphsList[Idx].NewIndex);
-            Flag := swap(Compound^.Flags);
-            if Flag and $20 = 0 then
-              Break;
-            Inc(Off,sizeof(TCompoundGlyphInfo));
-            if Flag and 1 = 1 then
-              inc(Off,4)
-            else
-              inc(Off,2);
-            if Off >= Size then
-              Break;
+            Off := SizeOf(TGlyphHeader);
+            while true do
+            begin
+              Compound := Pointer(FarInteger(P)+Cardinal(Off));
+              Idx := Swap(Compound^.GlyphIndex);
+              Compound^.GlyphIndex := Swap(FGlyphsList[Idx].NewIndex);
+              Flag := swap(Compound^.Flags);
+              if Flag and $20 = 0 then
+                Break;
+              Inc(Off,sizeof(TCompoundGlyphInfo));
+              if Flag and 1 = 1 then
+                inc(Off,4)
+              else
+                inc(Off,2);
+              if Off >= Size then
+                Break;
+            end;
           end;
+          MoveMemory(Pointer(FarInteger(Tables.Glyf.Table)+Cardinal(NOff)),WrkGlyph,Size);
+          Inc(Noff,Size);        
         end;
-        MoveMemory(Pointer(FarInteger(Tables.Glyf.Table)+Cardinal(NOff)),WrkGlyph,Size);
-        Inc(Noff,Size);
       end;
     finally
       FreeMemory(WrkGlyph);

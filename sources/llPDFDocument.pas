@@ -904,7 +904,8 @@ begin
     FEngine.SaveToStream ( '/OpenAction ' + FOpenDocumentAction.RefID);
 
   FEngine.SaveToStream('/Metadata '+GetRef ( MetaID ));
-
+  // adobe supplements 3
+  FEngine.SaveToStream('/Extensions <</ADBE <</ExtensionLevel 3 /BaseVersion/1.7>> >>');  
   FEngine.CloseObj;
   FEngine.SaveXREFAndTrailer( CatalogID, InfoID, EncryptID, FEngine.FileID);
   if Assigned(FDigSignature) then

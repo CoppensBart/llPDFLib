@@ -46,7 +46,7 @@ type
     function GetDescent: Integer; virtual; abstract;
     function GetWidth(Index:Word): Integer; virtual; abstract;
   public
-    procedure FillUsed(s:AnsiString); virtual;
+    procedure FillUsed(const s: AnsiString); virtual;
     procedure UsedChar(Ch:Byte); virtual;
     procedure SetAllASCII; virtual;
     property Ascent: Integer read GetAscent;
@@ -77,8 +77,7 @@ type
     FLast :Integer;
     FIndexes: array[32..127] of integer;
     FUnicodes: array[32..127] of Word;
-    procedure GetToUnicodeStream(Alias: AnsiString; Stream: TStream;
-        AliasName:AnsiString);
+    procedure GetToUnicodeStream(const Alias: AnsiString; Stream: TStream; const AliasName: AnsiString);
 
   protected
     procedure Save;override;
@@ -115,10 +114,11 @@ type
     function GetNewCharByIndex(Index: Integer): PNewCharInfo;
     function GetNewCharByUnicode(Index: Word): PNewCharInfo;
   public
-    constructor Create(Engine:TPDFEngine;FontName:String; FontStyle: TFontStyles;IsEmbedded:Boolean);
+    constructor Create(Engine: TPDFEngine; const FontName: String; FontStyle: TFontStyles; IsEmbedded:
+        Boolean);
     destructor Destroy; override;
     procedure Save; override;
-    procedure FillUsed(s:AnsiString); override;
+    procedure FillUsed(const s: AnsiString); override;
     procedure UsedChar(Ch:Byte); override;
     procedure SetAllASCII; override;
     procedure MarkAsUsed(Glyph:PGlyphInfo;Unicode:Word);
@@ -143,7 +143,7 @@ type
     constructor Create(PDFEngine: TPDFEngine);
     destructor Destroy; override;
     function GetFontByInfo(StdFont:TPDFStdFont): TPDFFont;overload;
-    function GetFontByInfo(FontName: String; Style: TFontStyles): TPDFFont; overload;
+    function GetFontByInfo(const FontName: String; Style: TFontStyles): TPDFFont; overload;
     property NonEmbeddedFonts: TStringList read FNonEmbeddedFonts write SetNonEmbeddedFonts;
   end;
 
@@ -703,7 +703,8 @@ end;
 { TPDFTrueTypeFont }
 
 
-constructor TPDFTrueTypeFont.Create(Engine:TPDFEngine;FontName:String; FontStyle: TFontStyles;IsEmbedded:Boolean);
+constructor TPDFTrueTypeFont.Create(Engine: TPDFEngine; const FontName: String; FontStyle:
+    TFontStyles; IsEmbedded: Boolean);
 var
   i: Integer;
 begin
@@ -733,7 +734,7 @@ begin
   inherited;
 end;
 
-procedure TPDFTrueTypeFont.FillUsed(s:AnsiString);
+procedure TPDFTrueTypeFont.FillUsed(const s: AnsiString);
 var
   I: Integer;
   B: Byte;
@@ -1006,7 +1007,7 @@ end;
 { TPDFFont }
 
 
-procedure TPDFFont.FillUsed(s:AnsiString);
+procedure TPDFFont.FillUsed(const s: AnsiString);
 begin
 
 end;
@@ -1074,7 +1075,7 @@ begin
   Result := FNT;
 end;
 
-function TPDFFonts.GetFontByInfo(FontName: String; Style: TFontStyles): TPDFFont;
+function TPDFFonts.GetFontByInfo(const FontName: String; Style: TFontStyles): TPDFFont;
 var
  FA :String;
 begin
@@ -1179,7 +1180,8 @@ begin
   Result := FParent.GetWidth(Index);
 end;
 
-procedure TPDFTrueTypeSubsetFont.GetToUnicodeStream ( Alias: AnsiString; Stream: TStream;AliasName:AnsiString);
+procedure TPDFTrueTypeSubsetFont.GetToUnicodeStream(const Alias: AnsiString; Stream: TStream; const
+    AliasName: AnsiString);
 var
   SS: TAnsiStringList;
   I: Integer;

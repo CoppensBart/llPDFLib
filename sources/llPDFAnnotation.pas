@@ -118,7 +118,7 @@ type
     FFonts: array of TPDFFont;
     FRadioGroups: array of TPDFRadioGroup;
     procedure AddFont(StdFnt:TPDFStdFont);overload;
-    procedure AddFont(FontName: String; Style: TFontStyles); overload;
+    procedure AddFont(const FontName: String; Style: TFontStyles); overload;
   protected
     procedure Clear;override;
     procedure Save;override;
@@ -205,8 +205,8 @@ type
     /// <param name="FontColor">
     ///   The color of the font
     /// </param>
-    procedure SetFont(FontName: String; FontStyle: TFontStyles; Size: Integer;
-        FontColor: TPDFColor); overload;
+    procedure SetFont(const FontName: String; FontStyle: TFontStyles; Size: Integer; FontColor:
+        TPDFColor); overload;
     /// <summary>
     ///   Adds a hint to the control, which will be displayed in the viewer when mouse pointer is holded over control
     /// </summary>
@@ -216,7 +216,7 @@ type
     /// <param name="Charset">
     ///   Charset of the caption
     /// </param>
-    procedure AddHint(Caption:string{$ifndef UNICODE};Charset:TFontCharset = 0 {$endif});
+    procedure AddHint(const Caption: string{$ifndef UNICODE}; Charset: TFontCharset = 0 {$endif});
     /// <summary>
     ///   The parameter specifies the basic color of the control
     /// </summary>
@@ -281,7 +281,8 @@ type
     /// <remarks>
     ///   Acroform manager must be received via TPDFDocument.Acroforms
     /// </remarks>
-    constructor Create ( AcroForm: TPDFAcroForms; Page: TPDFPage;Name: AnsiString;  Box: TRect;Caption: AnsiString  );
+    constructor Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString; Box: TRect;
+        Caption: AnsiString);
   end;
 
 
@@ -320,7 +321,7 @@ type
     /// <remarks>
     ///   Acroform manager must be received via TPDFDocument.Acroforms
     /// </remarks>
-    constructor Create ( AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString ; Box: TRect);
+    constructor Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString; Box: TRect);
     /// <summary>
     ///   If property set to true , the user may not change the value of the field.
     /// </summary>
@@ -390,7 +391,7 @@ type
     /// <remarks>
     ///   Acroform manager must be received via TPDFDocument.Acroforms
     /// </remarks>
-    constructor Create ( AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString; Box: TRect);
+    constructor Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString; Box: TRect);
     /// <summary>
     ///   Text present in PDF Edit control when file created.
     /// </summary>
@@ -455,7 +456,7 @@ type
   protected
     procedure Save;override;
   public
-    constructor Create( Name:AnsiString;PDFEngine:TPDFEngine);
+    constructor Create(const Name: AnsiString; PDFEngine: TPDFEngine);
   end;
 
   /// <summary>
@@ -500,7 +501,8 @@ type
     /// <remarks>
     ///   Acroform manager must be received via TPDFDocument.Acroforms
     /// </remarks>
-    constructor Create ( AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString;Box: TRect; ExportValue: AnsiString; Checked: Boolean );
+    constructor Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString; Box: TRect;
+        ExportValue: AnsiString; Checked: Boolean);
   end;
 
 
@@ -538,7 +540,7 @@ type
     /// <remarks>
     ///   Acroform manager must be received via TPDFDocument.Acroforms
     /// </remarks>
-    constructor Create ( AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString ; Box: TRect );
+    constructor Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString; Box: TRect);
     destructor Destroy; override;
     /// <summary>
     ///   Provides access to the list of items (strings) in the list portion of the combo box.
@@ -588,7 +590,7 @@ type
     /// <remarks>
     ///   Acroform manager must be received via TPDFDocument.Acroforms
     /// </remarks>
-    constructor Create ( AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString ; Box: TRect);
+    constructor Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString; Box: TRect);
     destructor Destroy; override;
     /// <summary>
     ///   This parameter provides access to all the lines of listbox, allows to manipulate them
@@ -634,7 +636,7 @@ type
     /// <remarks>
     ///   Acroform manager must be received via TPDFDocument.Acroforms
     /// </remarks>
-    constructor Create ( AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString; Box: TRect);
+    constructor Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString; Box: TRect);
     destructor Destroy;override;
     /// <summary>
     ///   When you create an object, a form in which you can make any graphical manipulation is created. This parameter provides access to this form
@@ -918,7 +920,8 @@ end;
 
 { TPDFAcroFormAnnotation }
 
-procedure TPDFAcroFormAnnotation.AddHint(Caption:string{$ifndef UNICODE};Charset:TFontCharset = 0 {$endif});
+procedure TPDFAcroFormAnnotation.AddHint(const Caption: string{$ifndef UNICODE}; Charset:
+    TFontCharset = 0 {$endif});
 begin
   FHintCaption:= Caption;
 {$ifndef UNICODE}
@@ -975,8 +978,8 @@ begin
   FFontColor := FontColor;
 end;
 
-procedure TPDFAcroFormAnnotation.SetFont(FontName: String;
-  FontStyle: TFontStyles; Size: Integer; FontColor: TPDFColor);
+procedure TPDFAcroFormAnnotation.SetFont(const FontName: String; FontStyle: TFontStyles; Size:
+    Integer; FontColor: TPDFColor);
 begin
   FTrueType := True;
   FFontName :=FontName;
@@ -1000,7 +1003,8 @@ begin
     Result := Result + '/C ' + FOnOtherControlChanged.RefID;
 end;
 
-constructor TPDFInputAnnotation.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString ; Box: TRect);
+constructor TPDFInputAnnotation.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name:
+    AnsiString; Box: TRect);
 var
  i: Integer;
 begin
@@ -1017,8 +1021,8 @@ end;
 
 { TPDFButton }
 
-constructor TPDFButton.Create(AcroForm: TPDFAcroForms;Page: TPDFPage; Name: AnsiString;Box: TRect;
-  Caption: AnsiString);
+constructor TPDFButton.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString; Box:
+    TRect; Caption: AnsiString);
 begin
   inherited Create( AcroForm, Page, Box);
   FCaption := Caption;
@@ -1168,7 +1172,7 @@ begin
   FFonts[i] := FNT;
 end;
 
-procedure TPDFAcroForms.AddFont(FontName: String; Style: TFontStyles);
+procedure TPDFAcroForms.AddFont(const FontName: String; Style: TFontStyles);
 var
   i: Integer;
   FNT: TPDFFont;
@@ -1346,7 +1350,8 @@ end;
 { TPDFComboBox }
 
 
-constructor TPDFComboBox.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString; Box: TRect);
+constructor TPDFComboBox.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString;
+    Box: TRect);
 begin
   inherited Create ( AcroForm, Page, Name,Box);
   FItems := TStringList.Create;
@@ -1440,7 +1445,8 @@ end;
 
 { TPDFListBox }
 
-constructor TPDFListBox.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString ; Box: TRect);
+constructor TPDFListBox.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString;
+    Box: TRect);
 begin
   inherited Create ( AcroForm, Page, Name, Box);
   FItems := TStringList.Create;
@@ -1577,7 +1583,8 @@ end;
 
 { TPDFEditBox }
 
-constructor TPDFEditBox.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString;  Box: TRect);
+constructor TPDFEditBox.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString;
+    Box: TRect);
 begin
   inherited Create ( AcroForm, Page, Name, Box );
   FBorderColor := GrayToPDFColor(0);
@@ -1714,8 +1721,8 @@ end;
 
 { TPDFRadioButton }
 
-constructor TPDFRadioButton.Create(AcroForm: TPDFAcroForms;
-  Page: TPDFPage; Name:AnsiString; Box: TRect;  ExportValue: AnsiString; Checked: Boolean);
+constructor TPDFRadioButton.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const Name: AnsiString;
+    Box: TRect; ExportValue: AnsiString; Checked: Boolean);
 var
   I: Integer;
   WS: AnsiString;
@@ -1828,7 +1835,7 @@ end;
 
 { TPDFRadioGroup }
 
-constructor TPDFRadioGroup.Create(Name: AnsiString; PDFEngine: TPDFEngine);
+constructor TPDFRadioGroup.Create(const Name: AnsiString; PDFEngine: TPDFEngine);
 begin
   inherited Create( PDFEngine);
   FName := Name;
@@ -1982,7 +1989,8 @@ end;
 
 { TPDFDigitalSignatureAnnotation }
 
-constructor TPDFDigitalSignatureAnnotation.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; Name: AnsiString; Box: TRect);
+constructor TPDFDigitalSignatureAnnotation.Create(AcroForm: TPDFAcroForms; Page: TPDFPage; const
+    Name: AnsiString; Box: TRect);
 var
   I: Integer;
 begin

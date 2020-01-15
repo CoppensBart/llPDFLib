@@ -186,9 +186,8 @@ type
     /// <param name="Action">
     ///   Action, that will be performed after clicking added Outline
     /// </param>
-    function Add ( Node: TPDFOutlineNode; Title: string; Action: TPDFAction
-      {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif} ): TPDFOutlineNode;
-      overload;
+    function Add(Node: TPDFOutlineNode; const Title: string; Action: TPDFAction {$ifndef UNICODE};
+        Charset: TFontCharset = ANSI_CHARSET{$endif}): TPDFOutlineNode; overload;
     /// <summary>
     ///   Adds a new tree node to a tree of the outline items.Function returns the node that has been added.
     /// </summary>
@@ -218,9 +217,8 @@ type
     /// <param name="Action">
     ///   Action, that will be performed after clicking added Outline
     /// </param>
-    function AddChildFirst ( Node: TPDFOutlineNode; Title: string; Action: TPDFAction
-      {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif} ): TPDFOutlineNode;
-      overload;
+    function AddChildFirst(Node: TPDFOutlineNode; const Title: string; Action: TPDFAction
+        {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif}): TPDFOutlineNode; overload;
     /// <summary>
     ///   Adds a new tree node to a tree of the outline items.Function returns the node that has been added.
     /// </summary>
@@ -233,9 +231,8 @@ type
     /// <param name="Action">
     ///   Action, that will be performed after clicking added Outline
     /// </param>
-    function AddFirst ( Node: TPDFOutlineNode; Title: string; Action: TPDFAction
-      {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif} ): TPDFOutlineNode;
-      overload;
+    function AddFirst(Node: TPDFOutlineNode; const Title: string; Action: TPDFAction {$ifndef UNICODE};
+        Charset: TFontCharset = ANSI_CHARSET{$endif}): TPDFOutlineNode; overload;
     /// <summary>
     ///   Adds a new tree node to a tree of the outline items.Function returns the node that has been added.
     /// </summary>
@@ -249,9 +246,8 @@ type
     /// <param name="Action">
     ///   Action, that will be performed after clicking added Outline
     /// </param>
-    function Insert ( Node: TPDFOutlineNode; Title: string; Action: TPDFAction
-      {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif} ): TPDFOutlineNode;
-      overload;
+    function Insert(Node: TPDFOutlineNode; const Title: string; Action: TPDFAction {$ifndef UNICODE};
+        Charset: TFontCharset = ANSI_CHARSET{$endif}): TPDFOutlineNode; overload;
     {$ifndef UNICODE}
     function Add ( Node: TPDFOutlineNode; Text: PWord; Len: Integer; Action: TPDFAction): TPDFOutlineNode; overload;
     function AddChild ( Node: TPDFOutlineNode; Text: PWord; Len: Integer; Action: TPDFAction): TPDFOutlineNode; overload;
@@ -454,8 +450,8 @@ begin
   Result := N;
 end;
 
-function TPDFOutlines.Add ( Node: TPDFOutlineNode; Title: string; Action: TPDFAction
-  {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif} ): TPDFOutlineNode;
+function TPDFOutlines.Add(Node: TPDFOutlineNode; const Title: string; Action: TPDFAction
+    {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif}): TPDFOutlineNode;
 begin
   Result := Add ( Node );
   Result.FTitle := Title;
@@ -476,8 +472,8 @@ begin
   {$endif}
 end;
 
-function TPDFOutlines.AddChildFirst ( Node: TPDFOutlineNode; Title: string;
-  Action: TPDFAction{$ifndef UNICODE}; Charset: TFontCharset{$endif} ): TPDFOutlineNode;
+function TPDFOutlines.AddChildFirst(Node: TPDFOutlineNode; const Title: string; Action: TPDFAction
+    {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif}): TPDFOutlineNode;
 begin
   Result := AddChildFirst ( Node );
   Result.FTitle := Title;
@@ -487,8 +483,8 @@ begin
   {$endif}
 end;
 
-function TPDFOutlines.AddFirst ( Node: TPDFOutlineNode; Title: string;
-  Action: TPDFAction{$ifndef UNICODE}; Charset: TFontCharset{$endif} ): TPDFOutlineNode;
+function TPDFOutlines.AddFirst(Node: TPDFOutlineNode; const Title: string; Action: TPDFAction
+    {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif}): TPDFOutlineNode;
 begin
   Result := AddFirst ( Node );
   Result.FTitle := Title;
@@ -498,8 +494,8 @@ begin
   {$endif}
 end;
 
-function TPDFOutlines.Insert ( Node: TPDFOutlineNode; Title: string;
-  Action: TPDFAction{$ifndef UNICODE}; Charset: TFontCharset{$endif} ): TPDFOutlineNode;
+function TPDFOutlines.Insert(Node: TPDFOutlineNode; const Title: string; Action: TPDFAction
+    {$ifndef UNICODE}; Charset: TFontCharset = ANSI_CHARSET{$endif}): TPDFOutlineNode;
 begin
   Result := Insert ( Node );
   Result.FTitle := Title;
