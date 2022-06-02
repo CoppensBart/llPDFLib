@@ -22,9 +22,9 @@ uses
   WinAPI.Windows, System.SysUtils, System.Classes, Vcl.Graphics, System.Math,
 {$endif}
 {$ifdef W3264}
-  System.ZLib, ZLibConst,
+  System.ZLib, System.ZLibConst,
 {$else}
-  llPDFFlate,        
+  llPDFFlate,
 {$endif}
   llPDFMisc, llPDFFont, llPDFImage, llPDFEngine,
   llPDFTypes;

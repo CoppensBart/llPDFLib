@@ -51,7 +51,7 @@
 
   {$IF CompilerVersion >= 23.0}
     {$DEFINE W3264}
-    {$define USENAMESPACE}
+    {$DEFINE USENAMESPACE}
   {$ifend}
 
   {$IF CompilerVersion >= 25.0}
@@ -69,31 +69,5 @@
 {$J+}
 {$R-}
 {$Q-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
